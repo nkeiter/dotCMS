@@ -7,9 +7,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -21,7 +19,6 @@ import org.junit.Test;
 
 import com.dotcms.TestBase;
 import com.dotcms.publisher.business.PublisherAPIImpl;
-import com.dotmarketing.beans.ContainerStructure;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.beans.Identifier;
 import com.dotmarketing.beans.MultiTree;
@@ -92,15 +89,9 @@ public class URLMapTest extends TestBase  {
 			container.setTitle("News Test Container");
 			container.setType("containers");
 			container.setUseDiv( true );
+			container.setStructureInode(simpleWidgetSt.getInode());
 
-			List<ContainerStructure> csList = new ArrayList<ContainerStructure>();
-	        ContainerStructure cs = new ContainerStructure();
-	        cs.setStructureId(simpleWidgetSt.getInode());
-	        cs.setCode("$!{story}");
-	        csList.add(cs);
-
-	        container = APILocator.getContainerAPI().save(container, csList, demoHost, user, false);
-//			WebAssetFactory.createAsset( container, user.getUserId(), demoHost );
+			WebAssetFactory.createAsset( container, user.getUserId(), demoHost );
 			APILocator.getVersionableAPI().setLive( container );
 
 

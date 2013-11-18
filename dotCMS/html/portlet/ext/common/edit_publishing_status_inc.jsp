@@ -1,4 +1,3 @@
-<%@page import="org.apache.jasper.tagplugins.jstl.core.ForEach"%>
 <%@page import="com.dotmarketing.portlets.languagesmanager.model.Language"%>
 <%@page import="java.util.*" %>
 <%@page import="com.dotmarketing.beans.*" %>
@@ -15,10 +14,10 @@
 
 <%
 	Object assetObject = request.getAttribute(com.dotmarketing.util.WebKeys.PERMISSIONABLE_EDIT);
-    String assetId = assetObject==null ? "" :  assetObject instanceof Folder ? ((Folder)assetObject).getInode() :
-    					assetObject instanceof Structure ? ((Structure)assetObject).getInode() :
-                        (assetObject instanceof Inode ? ((Inode)assetObject).getIdentifier() :
-                            (assetObject instanceof Contentlet ? ((Contentlet)assetObject).getIdentifier() : ""));
+	String assetId = assetObject==null ? "" :  assetObject instanceof Folder ? ((Folder)assetObject).getInode() :
+						assetObject instanceof Structure ? ((Structure)assetObject).getInode() :
+	                    (assetObject instanceof Inode ? ((Inode)assetObject).getIdentifier() :
+	                        (assetObject instanceof Contentlet ? ((Contentlet)assetObject).getIdentifier() : ""));
 
 	List<PushedAsset> pushedAssets = assetObject!=null ? APILocator.getPushedAssetsAPI().getPushedAssets(assetId) : new ArrayList<PushedAsset>();
 
@@ -57,8 +56,8 @@ function deletePushHistory() {
 <%@page import="com.dotcms.publisher.environment.bean.Environment"%>
 
 
-<div class="yui-g portlet-toolbar" style="padding-top: 10px">
-	<div class="yui-u first" style="font-weight: bold; padding-left: 15px">
+<div class="yui-g portlet-toolbar" style="padding-top: 30px">
+	<div class="yui-u first" style="font-weight: bold">
 		<%= LanguageUtil.get(pageContext, "publisher_push_history") %>
 	</div>
 
@@ -81,6 +80,7 @@ function deletePushHistory() {
 
 		Environment env = APILocator.getEnvironmentAPI().findEnvironmentById(pushedAsset.getEnvironmentId());
 		Bundle bundle = APILocator.getBundleAPI().getBundleById(pushedAsset.getBundleId());
+		if(bundle ==null) continue;
 		User owner = APILocator.getUserAPI().loadUserById(bundle.getOwner());
 
 

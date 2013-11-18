@@ -495,7 +495,7 @@ create index idx_template3 on template (lower(title));
 
 CREATE INDEX idx_contentlet_4 ON contentlet (structure_inode);
 ALTER TABLE Folder add constraint folder_identifier_fk foreign key (identifier) references identifier(id);
---ALTER TABLE containers add constraint structure_fk foreign key (structure_inode) references structure(inode);
+ALTER TABLE containers add constraint structure_fk foreign key (structure_inode) references structure(inode);
 ALTER TABLE htmlpage add constraint template_id_fk foreign key (template_id) references identifier(id);
 
 CREATE OR REPLACE TRIGGER  check_template_identifier
@@ -673,7 +673,8 @@ create table workflow_scheme(
 	archived number(1,0) default 0,
 	mandatory number(1,0) default 0,
 	default_scheme number(1,0) default 0,
-	entry_action_id varchar2(36)
+	entry_action_id varchar2(36),
+	mod_date timestamp
 );
 
 create table workflow_step(
@@ -801,14 +802,16 @@ alter table broken_link add CONSTRAINT fk_brokenl_field
 -- ****** Content Publishing Framework *******
 CREATE SEQUENCE PUBLISHING_QUEUE_SEQ START WITH 1 INCREMENT BY 1;
 
-CREATE TABLE publishing_queue
-(id INTEGER PRIMARY KEY NOT NULL,
-operation number(19,0), asset VARCHAR2(2000) NOT NULL,
-language_id number(19,0) NOT NULL, entered_date TIMESTAMP,
-last_try TIMESTAMP, num_of_tries number(19,0) DEFAULT 0 NOT NULL,
-in_error number(1,0) DEFAULT 0, last_results NCLOB,
-publish_date TIMESTAMP, server_id VARCHAR2(256),
-type VARCHAR2(256), bundle_id VARCHAR2(256), target nclob);
+CREATE TABLE publishing_queue (
+  id INTEGER PRIMARY KEY NOT NULL,
+  operation number(19,0),
+  asset VARCHAR2(2000) NOT NULL,
+  language_id number(19,0) NOT NULL,
+  entered_date TIMESTAMP,
+  publish_date TIMESTAMP,
+  type VARCHAR2(256),
+  bundle_id VARCHAR2(256)
+);
 
 CREATE OR REPLACE TRIGGER PUBLISHING_QUEUE_TRIGGER before
 insert on publishing_queue for each row
@@ -836,10 +839,11 @@ CREATE TABLE publishing_end_point (
 	sending number(1,0) DEFAULT 0);
 
 create table publishing_environment(
-	id varchar2(36) NOT NULL  primary key,
-	name varchar2(255) NOT NULL unique,
-	push_to_all number(1,0) DEFAULT 0 NOT NULL
+  	id varchar(36) NOT NULL  primary key,
+  	name varchar(255) NOT NULL unique,
+  	push_to_all number(1,0) DEFAULT 0 NOT NULL
 );
+
 
 create table sitesearch_audit (
     job_id varchar2(36),
@@ -860,49 +864,34 @@ create table sitesearch_audit (
     primary key(job_id,fire_date)
 );
 
-drop table publishing_queue;
-
-CREATE TABLE publishing_queue (
-    id INTEGER PRIMARY KEY NOT NULL,
-    operation number(19,0),
-    asset VARCHAR2(2000) NOT NULL,
-    language_id number(19,0) NOT NULL,
-    entered_date TIMESTAMP,
-    publish_date TIMESTAMP,
-    type VARCHAR2(256),
-    bundle_id VARCHAR2(256)
-);
-
-DROP SEQUENCE PUBLISHING_QUEUE_SEQ;
-CREATE SEQUENCE PUBLISHING_QUEUE_SEQ START WITH 1 INCREMENT BY 1;
-CREATE OR REPLACE TRIGGER PUBLISHING_QUEUE_TRIGGER before insert on publishing_queue for each row begin select PUBLISHING_QUEUE_SEQ.nextval into :new.id from dual; end;
-
 create table publishing_bundle(
-	id varchar2(36) NOT NULL  primary key,
-	name varchar2(255) NOT NULL unique,
-	publish_date TIMESTAMP,
-	expire_date TIMESTAMP,
-	owner varchar2(100)
+	  id varchar2(36) NOT NULL  primary key,
+	  name varchar2(255) NOT NULL,
+	  publish_date TIMESTAMP,
+	  expire_date TIMESTAMP,
+	  owner varchar2(100)
 );
 
 create table publishing_bundle_environment(
-	id varchar2(36) NOT NULL primary key,
-	bundle_id varchar2(36) NOT NULL,
-	environment_id varchar2(36) NOT NULL
+	  id varchar2(36) NOT NULL primary key,
+	  bundle_id varchar2(36) NOT NULL,
+	  environment_id varchar2(36) NOT NULL
 );
 
 alter table publishing_bundle_environment add constraint FK_bundle_id foreign key (bundle_id) references publishing_bundle(id);
 alter table publishing_bundle_environment add constraint FK_environment_id foreign key (environment_id) references publishing_environment(id);
 
 create table publishing_pushed_assets(
-	bundle_id varchar2(36) NOT NULL,
-	asset_id varchar2(36) NOT NULL,
-	asset_type varchar2(255) NOT NULL,
-	push_date TIMESTAMP,
-	environment_id varchar2(36) NOT NULL
+  bundle_id varchar2(36) NOT NULL,
+  asset_id varchar2(36) NOT NULL,
+  asset_type varchar2(255) NOT NULL,
+  push_date TIMESTAMP,
+  environment_id varchar2(36) NOT NULL
 );
 
 CREATE INDEX idx_pushed_assets_1 ON publishing_pushed_assets (bundle_id);
 CREATE INDEX idx_pushed_assets_2 ON publishing_pushed_assets (environment_id);
 
 alter table publishing_bundle add force_push number(1,0) ;
+
+CREATE INDEX idx_pub_qa_1 ON publishing_queue_audit (status);

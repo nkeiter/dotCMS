@@ -40,7 +40,7 @@
 	var _inodeCounter = 0;
 	var pushHandler = null;
 
-	function remotePublish(){
+	 function remotePublish(){
     	dojo.require("dotcms.dojo.push.PushHandler");
     	pushHandler = new dotcms.dojo.push.PushHandler('$languagewebapi.getFromUserLanguage("Remote-Publish")');
         pushHandler.showDialog('$htmlPageInode');
@@ -60,6 +60,12 @@
        	dojo.parser.parse("dotAddWidget");
       	myDialog.show();
 	}
+
+	function addToBundle (objId) {
+        dojo.require("dotcms.dojo.push.PushHandler");
+        pushHandler = new dotcms.dojo.push.PushHandler();
+        pushHandler.showAddToBundleDialog('$htmlPageInode', '$languagewebapi.getFromUserLanguage("Add-To-Bundle")');
+    }
 
 	function _dotWidgetInitiate(){
 		_dotWidgetCleanResultsData();
@@ -345,9 +351,8 @@
 			parameter = document.getElementById("submitParent").value;
 			submitParent(parameter);
 			};
-		var callback = function(containerStructureList){
-			console.log(containerStructureList);
-			//var strInode = containerStructure['inode'];
+		var callback = function(containerStructure){
+			var strInode = containerStructure['inode'];
 			dojo.require("dotcms.dijit.form.ContentSelector");
 
 			// http://jira.dotmarketing.net/browse/DOTCMS-6269
@@ -355,16 +360,12 @@
 			   reuseContentDialog.dialog.destroyRecursive();
 
 			reuseContentDialog = new dotcms.dijit.form.ContentSelector({
-						onContentSelected:onContentSelection,
-						containerStructures:containerStructureList
+						structureInode:strInode,
+						onContentSelected:onContentSelection
 					});
 			reuseContentDialog.show();
 		};
-		ContainerAjax.getContainerStructures(x,callback);
-	}
-
-	function displayStructure(structureInode) {
-		reuseContentDialog.displayStructureFields(structureInode);
+		ContainerAjax.getContainerStructure(x,callback);
 	}
 
 	function submitParent(){

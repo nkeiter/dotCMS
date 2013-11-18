@@ -157,7 +157,7 @@ function timeChange() {
 
 function stopBrowing() {
 	dojo.xhr('GET',{
-        url:'/DotAjaxDirector/com.dotcms.timemachine.ajax.TimeMachineAjaxAction/cmd/stopBrowsing',
+        url:'/DotAjaxDirector/com.dotcms.timemachine.ajax.TimeMachineAjaxAction/cmd/stopBrowsing/r/'+ Math.floor(Math.random()*11232132132131),
         handle: function() {
             dojo.empty('iframeWrapper');
             dijit.byId('closeBtn').setDisabled(true);
@@ -183,13 +183,14 @@ function stopBrowing() {
     });
 }
 function showSettings() {
+	var r = Math.floor(Math.random() * 1000000000);
 	var dialog = new dijit.Dialog({
 		id: 'settingsDialog',
         title: "<%= LanguageUtil.get(pageContext, "TIMEMACHINE-SETTINGS")%>",
         style: "width: 600px;height: 600px;",
         content: new dojox.layout.ContentPane({
         	style: "height:550px; width: 580px;",
-            href: "/html/portlet/ext/timemachine/settings.jsp"
+            href: "/html/portlet/ext/timemachine/settings.jsp?random="+r
         }),
         onHide: function() {
         	var dialog=this;

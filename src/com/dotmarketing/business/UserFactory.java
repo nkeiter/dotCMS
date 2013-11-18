@@ -132,7 +132,7 @@ public abstract class UserFactory {
 	 * @deprecated
      */
     protected abstract Map<String, Object> getUsersAnRolesByName(String filter, int start,int limit) throws DotDataException;
-
+    
     /**
      * Returns a list of users ids filtering by a given creation date
      *
@@ -143,9 +143,9 @@ public abstract class UserFactory {
      * @throws DotDataException
      */
     protected abstract List<String> getUsersIdsByCreationDate ( Date filterDate, int start, int limit ) throws DotDataException;
-    
+
     /**
-     * 
+     *
      * @param userToDelete
      * @param user
      * @param respectFrontEndRoles

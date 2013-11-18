@@ -150,7 +150,7 @@ if(errorMessage != null){
 <script type="text/javascript" src="/html/js/chrome_frame/CFInstall.min.js"></script>
 
 <style>
-	body{background-color:<%= company.getSize() %>;background-image:url(<%= dotBackImage %>);background-repeat:no-repeat;background-position:bottom top;background-size:100% 100%;}
+	body{background-color:<%= company.getSize() %>;background-image:url(<%= dotBackImage %>);background-repeat:no-repeat;background-position:top center;}
 	#loginBox, #forgotPassword{-moz-box-shadow:2px 2px 8px #274665;-webkit-box-shadow:2px 2px 8px #274665;width:450px;}
 	.dijitTooltipFocusNode:focus{outline: none;}
 	.dijitDialogUnderlay{opacity: 0.2;}
@@ -355,7 +355,7 @@ function showLanguageSelector(){
 
 
 
-			<%--  Language Selector --%>
+			<%------  Language Selector -----%>
 			    <div id="languageSelectorBar" style="visibility: hidden; display: none;" title="Select Language">
 			    	<div style="text-align: right;margin-right:-5px;margin-top:-3px;">
 			    		<img onclick="dijit.popup.close(myDialog);" alt="<%= LanguageUtil.get(pageContext, "close") %>" title="<%= LanguageUtil.get(pageContext, "close") %>" src="/html/js/dojo/release/dojo/dijit/themes/dmundra/images/tabCloseHover.png" width="10" height="10" style="cursor: pointer;">
@@ -372,9 +372,8 @@ function showLanguageSelector(){
 					    <% } %>
 				    </div>
 			   </div>
+			<%------/  Language Selector -----%>
 
-			<%--  Language Selector --%>
-			
 			<div class="inputCaption" style="float:right;">
             	<a href="javascript:showForgot()"><%= LanguageUtil.get(pageContext, "forgot-password") %></a>
             </div>

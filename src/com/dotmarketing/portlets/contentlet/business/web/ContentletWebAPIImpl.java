@@ -304,6 +304,7 @@ public class ContentletWebAPIImpl implements ContentletWebAPI {
 		currentContentlet.setStringProperty("wfExpireTime", (String) contentletFormData.get("wfExpireTime"));
 		currentContentlet.setStringProperty("wfNeverExpire", (String) contentletFormData.get("wfNeverExpire"));
 		currentContentlet.setStringProperty("whereToSend", (String) contentletFormData.get("whereToSend"));
+		currentContentlet.setStringProperty("forcePush", (String) contentletFormData.get("forcePush"));
 
 
 
@@ -365,6 +366,29 @@ public class ContentletWebAPIImpl implements ContentletWebAPI {
 				throw new DotSecurityException("User cannot checkout contentlet : ", dse);
 			}
 		}
+
+		/***
+		 *
+		 * Workflow
+		 *
+		 */
+		currentContentlet.setStringProperty("wfActionId", (String) contentletFormData.get("wfActionId"));
+		currentContentlet.setStringProperty("wfActionComments", (String) contentletFormData.get("wfActionComments"));
+		currentContentlet.setStringProperty("wfActionAssign", (String) contentletFormData.get("wfActionAssign"));
+
+		/**
+		 *
+		 * Push Publishing Actionlet
+		 *
+		 */
+		currentContentlet.setStringProperty("wfPublishDate", (String) contentletFormData.get("wfPublishDate"));
+		currentContentlet.setStringProperty("wfPublishTime", (String) contentletFormData.get("wfPublishTime"));
+		currentContentlet.setStringProperty("wfExpireDate", (String) contentletFormData.get("wfExpireDate"));
+		currentContentlet.setStringProperty("wfExpireTime", (String) contentletFormData.get("wfExpireTime"));
+		currentContentlet.setStringProperty("wfNeverExpire", (String) contentletFormData.get("wfNeverExpire"));
+		currentContentlet.setStringProperty("whereToSend", (String) contentletFormData.get("whereToSend"));
+		currentContentlet.setStringProperty("forcePush", (String) contentletFormData.get("forcePush"));
+
 
 		contentletFormData.put(WebKeys.CONTENTLET_FORM_EDIT, currentContentlet);
 		contentletFormData.put(WebKeys.CONTENTLET_EDIT, currentContentlet);
@@ -790,6 +814,10 @@ public class ContentletWebAPIImpl implements ContentletWebAPI {
 				selectedStructure = (String) contentletFormData.get("selectedStructure");
 				st = (Structure) InodeFactory.getInode(selectedStructure, Structure.class);
 
+			} else if (UtilMethods.isSet(contentletFormData.get("contentcontainer_inode"))) {
+				String containerInode = (String) contentletFormData.get("contentcontainer_inode");
+				Container container = (Container) InodeFactory.getInode(containerInode, Container.class);
+				st = (Structure) InodeFactory.getInode(container.getStructureInode(), Structure.class);
 			}else if (UtilMethods.isSet(contentletFormData.get("sibblingStructure"))) {
 				selectedStructure = (String) contentletFormData.get("sibblingStructure");
 				st = (Structure) InodeFactory.getInode(selectedStructure, Structure.class);

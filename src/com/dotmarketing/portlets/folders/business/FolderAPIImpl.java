@@ -3,7 +3,6 @@ package com.dotmarketing.portlets.folders.business;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -12,6 +11,7 @@ import java.util.StringTokenizer;
 import java.util.TimeZone;
 
 import com.dotcms.enterprise.cmis.QueryResult;
+import com.dotcms.publisher.business.PublisherAPI;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.beans.Identifier;
 import com.dotmarketing.beans.Inode;
@@ -110,19 +110,19 @@ public class FolderAPIImpl implements FolderAPI  {
 		try {
 			localTransaction = HibernateUtil.startLocalTransactionIfNeeded();
 
+			renamed=ffac.renameFolder(folder, newName, user, respectFrontEndPermissions);
 
-			return ffac.renameFolder(folder, newName, user, respectFrontEndPermissions);
+			if (localTransaction) {
+                HibernateUtil.commitTransaction();
+            }
 
+			return renamed;
 		} catch (Exception e) {
 
 			if (localTransaction) {
 				HibernateUtil.rollbackTransaction();
 			}
-			throw new DotDataException(e.getMessage());
-		} finally {
-			if (localTransaction) {
-				HibernateUtil.commitTransaction();
-			}
+			throw new DotDataException(e.getMessage(),e);
 		}
 	}
 
@@ -373,6 +373,8 @@ public class FolderAPIImpl implements FolderAPI  {
 				CacheLocator.getNavToolCache().removeNavByPath(ident.getHostId(), ident.getParentPath());
 			}
 
+			PublisherAPI.getInstance().deleteElementFromPublishQueueTable(folder.getInode());
+
 			if(localTransaction){
                 HibernateUtil.commitTransaction();
             }
@@ -514,7 +516,6 @@ public class FolderAPIImpl implements FolderAPI  {
 			throw new DotSecurityException("User " + user + " does not have permission to add to " + name);
 		}
 
-		folder.setModDate(new Date());
 
 		ffac.save(folder, existingId);
 

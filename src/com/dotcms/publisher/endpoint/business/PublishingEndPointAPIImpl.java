@@ -43,6 +43,11 @@ public class PublishingEndPointAPIImpl implements PublishingEndPointAPI {
 		return publishingEndPointFactory.getEndPointById(id);
 	}
 
+	@Override
+	public PublishingEndPoint findEndPointByName(String name) throws DotDataException {
+		return publishingEndPointFactory.getEndPointByName(name);
+	}
+
 	/**
 	 * Save a new end point
 	 */
@@ -72,13 +77,12 @@ public class PublishingEndPointAPIImpl implements PublishingEndPointAPI {
 		return publishingEndPointFactory.getEnabledSendingEndPointByAddress(address);
 	}
 
-	/**
-	 * Returns a single end point configured like sender. Null otherwise.
-	 *
-	 */
+    /**
+     * Returns a single end point configured like sender. Null otherwise.
+     *
+     */
 	public List<PublishingEndPoint> findSendingEndPointsByEnvironment(String environmentId) throws DotDataException {
 		return publishingEndPointFactory.getSendingEndPointsByEnvironment(environmentId);
-
 	}
 
 	/**
@@ -95,10 +99,5 @@ public class PublishingEndPointAPIImpl implements PublishingEndPointAPI {
 	public void setPublishingEndPointFactory(
 			PublishingEndPointFactory publishingEndPointFactory) {
 		this.publishingEndPointFactory = publishingEndPointFactory;
-	}
-
-	@Override
-	public PublishingEndPoint findEndPointByName(String name) throws DotDataException {
-		return publishingEndPointFactory.getEndPointByName(name);
 	}
 }

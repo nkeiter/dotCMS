@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.beans.WebAsset;
 import com.dotmarketing.business.APILocator;
@@ -343,6 +344,7 @@ public class HostAPIImpl implements HostAPI {
 			hostCache.remove(host);
 		}
 		Contentlet c;
+		ContentletAPI conAPI = APILocator.getContentletAPI();
 		try {
 			c = APILocator.getContentletAPI().checkout(host.getInode(), user, respectFrontendRoles);
 		} catch (DotContentletStateException e) {
@@ -359,13 +361,25 @@ public class HostAPIImpl implements HostAPI {
 
 		if(host.isDefault()) {  // If host is marked as default make sure that no other host is already set to be the default
 			List<Host> hosts= findAll(user, respectFrontendRoles);
+			Host otherHost;
+			Contentlet otherHostContentlet;
 			for(Host h : hosts){
 				if(h.getIdentifier().equals(host.getIdentifier())){
 					continue;
 				}
 				if(h.isDefault()){
-					h.setDefault(false);
-					save(h, user, respectFrontendRoles);
+					otherHostContentlet = APILocator.getContentletAPI().checkout(h.getInode(), user, respectFrontendRoles);
+					otherHost =  new Host(otherHostContentlet);
+					hostCache.remove(otherHost);
+					otherHost.setDefault(false);
+					otherHost.setInode("");
+					if(host.getBoolProperty("_dont_validate_me"))
+					    otherHost.setProperty("_dont_validate_me",true);
+					if(host.getBoolProperty("__disable_workflow__"))
+					    otherHost.setProperty("__disable_workflow__",true);
+					otherHostContentlet = conAPI.checkin(otherHost, user, respectFrontendRoles);
+					otherHost =  new Host(otherHostContentlet);
+					hostCache.add(otherHost);
 				}
 			}
 		}
@@ -473,37 +487,15 @@ public class HostAPIImpl implements HostAPI {
 
 	}
 
-	public void delete(Host host, User user, boolean respectFrontendRoles) {
-		DotConnect dc = new DotConnect();
-		List<HashMap<String, String>> types = new ArrayList<HashMap<String, String>>();
-		List<HashMap<String, String>> inodes = new ArrayList<HashMap<String, String>>();
-		dc.setSQL("select distinct asset_type from identifier where asset_type<>'contentlet'");
-		try {
-			types = dc.loadResults();
-			for(HashMap<String, String> type :types){
-				String assetType = type.get("asset_type");
-				dc.setSQL("select i.inode,type,asset.identifier from inode i,"+assetType+" asset,identifier ident " +
-						"where i.inode = asset.inode and asset.identifier = ident.id and ident.host_inode = ? ");
-				dc.addParam(host.getIdentifier());
-				inodes.addAll(dc.loadResults());
-			}
-		} catch (DotDataException e) {
-			Logger.error(HostAPIImpl.class, e.getMessage(), e);
-			throw new DotRuntimeException(e.getMessage(), e);
-		}
+	public void delete(final Host host, final User user, final boolean respectFrontendRoles) {
+	    delete(host,user,respectFrontendRoles,false);
+	}
+	
+	public void delete(final Host host, final User user, final boolean respectFrontendRoles, boolean runAsSepareThread) {
+		
 
 		class DeleteHostThread extends Thread {
-			private User user;
-			private boolean respectFrontendRoles;
-			private Host host;
-			private List<HashMap<String, String>> inodes;
 
-			public DeleteHostThread(Host host,User user, boolean respectFrontendRoles,List<HashMap<String, String>> inodes) {
-				this.host = host;
-				this.user = user;
-				this.respectFrontendRoles = respectFrontendRoles;
-				this.inodes = inodes;
-			}
 			public void run() {
 				try {
 					deleteHost();
@@ -545,8 +537,10 @@ public class HostAPIImpl implements HostAPI {
 
 				// Remove Contentlet
 				ContentletAPI contentAPI = APILocator.getContentletAPI();
-				List<Contentlet> contentlets = contentAPI.findContentletsByHost(host, user, respectFrontendRoles);
-				for (Contentlet contentlet : contentlets) {
+				dc.setSQL("select distinct id from identifier join contentlet on contentlet.identifier=identifier.id where identifier.host_inode=?");
+				dc.addParam(host.getIdentifier());
+				for (Map<String,Object> rr : dc.loadObjectResults()) {
+				    Contentlet contentlet = contentAPI.findContentletByIdentifier((String)rr.get("id"), false, APILocator.getLanguageAPI().getDefaultLanguage().getId(), user, false);
 					contentAPI.delete(contentlet, user, respectFrontendRoles);
 				}
 
@@ -593,29 +587,38 @@ public class HostAPIImpl implements HostAPI {
 					}
 					StructureFactory.deleteStructure(structure);
 				}
+				
+				String[] assets = {"containers","template","htmlpage","links"};
+				for(String asset : assets) {
+				    dc.setSQL("select inode from "+asset+" where exists (select * from identifier where host_inode=? and id="+asset+".identifier)");
+	                dc.addParam(host.getIdentifier());
+	                for(Map row : (List<Map>)dc.loadResults()) {
+	                    dc.setSQL("delete from "+asset+" where inode=?");
+	                    dc.addParam(row.get("inode"));
+	                    dc.loadResult();
+	                }
+				}
+				
+                // kill bad identifiers pointing to the host
+                dc.setSQL("delete from identifier where host_inode=?");
+                dc.addParam(host.getIdentifier());
+                dc.loadResult();
 
 				// Remove Host
 				Contentlet c = contentAPI.find(host.getInode(), user, respectFrontendRoles);
 				contentAPI.delete(c, user, respectFrontendRoles);
-
+				hostCache.remove(host);
 				hostCache.clearAliasCache();
 
 			}
 		}
-		DeleteHostThread thread = new DeleteHostThread(host,user,respectFrontendRoles,inodes);
+		
+		DeleteHostThread thread = new DeleteHostThread();
 
-		if (inodes.size()> 50) {
-			// Starting the thread
+		if(runAsSepareThread) {
 			thread.start();
-			//SessionMessages.add(httpReq, "message", "message.contentlets.batch.deleting.background");
 		} else {
-			// Executing synchronous because there is not that many
-			try {
-				thread.deleteHost();
-			} catch (Exception e) {
-				Logger.error(HostAPIImpl.class, e.getMessage(), e);
-				throw new DotRuntimeException(e.getMessage(), e);
-			}
+			thread.run();
 		}
 	}
 
@@ -830,22 +833,20 @@ public class HostAPIImpl implements HostAPI {
 
 		String workingHostName = workinghost.getHostname();
 		String updatedHostName = updatedhost.getHostname();
-		String workingURL = "";
-		String newURL = "";
-		HibernateUtil dh = new HibernateUtil(VirtualLink.class);
-		List<VirtualLink> resultList = new ArrayList<VirtualLink>();
-		dh.setQuery("select inode from inode in class " + VirtualLink.class.getName() + " where inode.url like ?");
-		dh.setParam(workingHostName+":/%");
-		resultList = dh.list();
-		for (VirtualLink vl : resultList) {
-			workingURL = vl.getUrl();
-			newURL = updatedHostName+workingURL.substring(workingHostName.length());//gives url with updatedhostname
-			vl.setUrl(newURL);
-			HibernateUtil.saveOrUpdate(vl);
+		if(!workingHostName.equals(updatedHostName)) {
+    		HibernateUtil dh = new HibernateUtil(VirtualLink.class);
+    		List<VirtualLink> resultList = new ArrayList<VirtualLink>();
+    		dh.setQuery("select inode from inode in class " + VirtualLink.class.getName() + " where inode.url like ?");
+    		dh.setParam(workingHostName+":/%");
+    		resultList = dh.list();
+    		for (VirtualLink vl : resultList) {
+    			String workingURL = vl.getUrl();
+    			String newURL = updatedHostName+workingURL.substring(workingHostName.length());//gives url with updatedhostname
+    			vl.setUrl(newURL);
+    			HibernateUtil.saveOrUpdate(vl);
+    			VirtualLinksCache.removePathFromCache(vl.getUrl());
+    		}
 		}
-
-		VirtualLinksCache.clearCache();
-		hostCache.clearAliasCache();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -853,22 +854,23 @@ public class HostAPIImpl implements HostAPI {
 
 		String workingHostName = workinghost.getHostname();
 		String updatedHostName = updatedhost.getHostname();
-		String workingURL = "";
-		String newURL = "";
-		HibernateUtil dh = new HibernateUtil(Link.class);
-		List<Link> resultList = new ArrayList<Link>();
-		dh.setQuery("select asset from asset in class " + Link.class.getName() + " where asset.url like ?");
-		dh.setParam(workingHostName+"/%");
-		resultList = dh.list();
-		for(Link link : resultList){
-			workingURL = link.getUrl();
-			newURL = updatedHostName+workingURL.substring(workingHostName.length());//gives url with updatedhostname
-			link.setUrl(newURL);
-			HibernateUtil.saveOrUpdate(link);
+		if(!workingHostName.equals(updatedHostName)) {
+    		HibernateUtil dh = new HibernateUtil(Link.class);
+    		List<Link> resultList = new ArrayList<Link>();
+    		dh.setQuery("select asset from asset in class " + Link.class.getName() + " where asset.url like ?");
+    		dh.setParam(workingHostName+"/%");
+    		resultList = dh.list();
+    		for(Link link : resultList){
+    			String workingURL = link.getUrl();
+    			String newURL = updatedHostName+workingURL.substring(workingHostName.length());//gives url with updatedhostname
+    			link.setUrl(newURL);
+    			try {
+                    APILocator.getMenuLinkAPI().save(link, APILocator.getUserAPI().getSystemUser(), false);
+                } catch (DotSecurityException e) {
+                    throw new RuntimeException(e);
+                }
+    		}
 		}
-		CacheLocator.getMenuLinkCache().clearCache();
-		RefreshMenus.deleteMenus();
-		CacheLocator.getNavToolCache().clearCache();
 
 	}
 

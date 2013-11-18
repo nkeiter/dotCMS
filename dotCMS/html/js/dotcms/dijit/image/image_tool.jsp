@@ -317,13 +317,13 @@
 
 
 
-<%--   Let the Dialogs commence!      --%>
+<%-----------------------   Let the Dialogs commence!        ----------------------%>
 
 
 
 
 
-	<div id="hsbDialog" dojoType="dijit.Dialog" title="Color" style="display: none" onfocus='blur()'>
+	<div id="hsbDialog" dojoType="dijit.Dialog" title="Color" style="display: none" >
 		<table  id="hsbTable" align="center">
 			<tr>
 				<td><%= LanguageUtil.get(pageContext, "Brightness") %>:</td>

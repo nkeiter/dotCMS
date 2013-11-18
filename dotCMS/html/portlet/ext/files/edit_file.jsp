@@ -658,6 +658,7 @@ function editImage(inode, callingImg){
 	<%} %>
 <!-- /Versions Tab -->
 
+
 </div>
 <!-- /TabContainer-->
 <div class="clear"></div>

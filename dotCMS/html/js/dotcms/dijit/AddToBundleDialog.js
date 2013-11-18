@@ -25,14 +25,14 @@ dojo.declare("dotcms.dijit.AddToBundleDialog", null, {
         //Verify if we need to display the date filtering box
         var dateFilter = this.dateFilter;
         var connection = dojo.connect(dia, "onLoad", function () {
-            dojo.disconnect(connection);
+        	dojo.disconnect(connection);
 
-            var filterDiv = dojo.byId("filterTimeDiv_atb");
-            if (dateFilter) {
-                filterDiv.style.display = "";
-            } else {
-                filterDiv.style.display = "none";
-            }
+        	var filterDiv = dojo.byId("filterTimeDiv_atb");
+        	if (dateFilter) {
+        		filterDiv.style.display = "";
+        	} else {
+        		filterDiv.style.display = "none";
+        	}
         });
 
         dojo.connect(dia, "onDownloadEnd", function () {

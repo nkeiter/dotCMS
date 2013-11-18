@@ -1,7 +1,6 @@
 package com.dotmarketing.portlets.structure.model;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,9 +20,9 @@ import com.dotmarketing.util.UtilMethods;
 
 public class Field extends Inode implements Exportable, Importable
 {
-
+	
 	public enum FieldType {
-
+		
 		BUTTON("button"),
 		CHECKBOX("checkbox"),
 		DATE("date"),
@@ -50,17 +49,17 @@ public class Field extends Inode implements Exportable, Importable
 		CUSTOM_FIELD("custom_field"), // http://jira.dotmarketing.net/browse/DOTCMS-2869
 		HOST_OR_FOLDER("host or folder"),// http://jira.dotmarketing.net/browse/DOTCMS-3232
 		KEY_VALUE("key_value");
-
+		
 		private String value;
-
+		
 		FieldType (String value) {
 			this.value = value;
 		}
-
+		
 		public String toString () {
 			return value;
 		}
-
+		
 		public static FieldType getFieldType (String value) {
 			FieldType[] types = FieldType.values();
 			for (FieldType type : types) {
@@ -69,11 +68,11 @@ public class Field extends Inode implements Exportable, Importable
 			}
 			return null;
 		}
-
+		
 	}
-
+	
 	public enum DataType {
-
+		
 		BOOL("bool"),
 		DATE("date"),
 		FLOAT("float"),
@@ -82,17 +81,17 @@ public class Field extends Inode implements Exportable, Importable
 		LONG_TEXT("text_area"),
 		SECTION_DIVIDER("section_divider"),
 		BINARY("binary");
-
+		
 		private String value;
-
+		
 		DataType (String value) {
 			this.value = value;
 		}
-
+		
 		public String toString () {
 			return value;
 		}
-
+		
 		public static DataType getDataType (String value) {
 			DataType[] types = DataType.values();
 			for (DataType type : types) {
@@ -101,11 +100,11 @@ public class Field extends Inode implements Exportable, Importable
 			}
 			return null;
 		}
-
+		
 	}
-
+	
 	private static final long serialVersionUID = 1L;
-
+	
 	private String structureInode;
 	private String fieldName;
 	private String fieldType;
@@ -124,10 +123,9 @@ public class Field extends Inode implements Exportable, Importable
 	private boolean readOnly;
     private boolean searchable;
     private boolean unique;
-    private Date modDate;
-
+    
     public Field(){
-    	super.setType("field");
+    	super.setType("field");	
     	setFieldName("");
     	setFieldType("");
     	setFieldContentlet("");
@@ -136,9 +134,8 @@ public class Field extends Inode implements Exportable, Importable
     	setRegexCheck("");
     	setHint("");
     	setDefaultValue("");
-    	modDate = new Date();
     }
-
+    
 	public boolean isDependenciesMet() throws DotDependencyException {
 		// TODO Auto-generated method stub
 		return false;
@@ -154,7 +151,7 @@ public class Field extends Inode implements Exportable, Importable
 	public Field (String fieldName, FieldType fieldType, DataType dataType, Structure structure, boolean required, boolean listed, boolean indexed, int sortOrder,boolean fixed, boolean readOnly, boolean searchable) {
 		this(fieldName, fieldType, dataType, structure, required, listed, indexed, sortOrder, "", "", "",fixed, readOnly, searchable);
 	}
-
+	
 	public Field (String fieldName, FieldType fieldType, DataType dataType, Structure structure, boolean required, boolean listed, boolean indexed, int sortOrder, String values, String defaultValue, String checkRegex, boolean fixed, boolean readOnly, boolean searchable) {
 		this();
 		this.setFieldContentlet(FieldFactory.getNextAvaliableFieldNumber(dataType.toString(), "", structure.getInode()));
@@ -179,7 +176,7 @@ public class Field extends Inode implements Exportable, Importable
 		this.setReadOnly(readOnly);
 		this.setFixed(fixed);
 	}
-
+    
     /**
      * Database name of the field (text1, text2, ..., date1, ...)
      * @return
@@ -227,10 +224,7 @@ public class Field extends Inode implements Exportable, Importable
 		this.structureInode = structureInode;
 	}
 	public String getValues() {
-		if(UtilMethods.isSet(values)){
-			return values;
-		}
-		return "";
+		return values;
 	}
 	public void setValues(String values) {
 		this.values = values;
@@ -247,7 +241,7 @@ public class Field extends Inode implements Exportable, Importable
 	public void setRegexCheck(String regexCheck) {
 		this.regexCheck = regexCheck;
 	}
-
+	
 	/**
 	 * @return Returns the defaultValue.
 	 */
@@ -282,14 +276,14 @@ public class Field extends Inode implements Exportable, Importable
 	public void setIndexed(boolean indexed) {
 		this.indexed = indexed;
 	}
-
+        
     public boolean isListed() {
         return listed;
     }
     public void setListed(boolean listed) {
         this.listed = listed;
     }
-
+    
 
 	public boolean isFixed() {
 		return fixed;
@@ -306,7 +300,7 @@ public class Field extends Inode implements Exportable, Importable
 	public void setReadOnly(boolean readOnly) {
 		this.readOnly = readOnly;
 	}
-
+    
     public Map<String, Object> getMap () {
         Map<String, Object> oMap = new HashMap<String, Object> ();
         oMap.put("defaultValue", this.getDefaultValue());
@@ -316,7 +310,7 @@ public class Field extends Inode implements Exportable, Importable
         oMap.put("fieldFieldType", this.getFieldType());
         oMap.put("fieldHint", this.getHint());
         oMap.put("fieldRegexCheck", this.getRegexCheck());
-        oMap.put("fieldValues", this.getValues());
+        oMap.put("fieldValues", this.getValues()!=null ? this.getValues() : "");
         oMap.put("fieldVelocityVarName", this.getVelocityVarName());
         oMap.put("fieldSortOrder", this.getSortOrder());
         oMap.put("fieldStructureInode", this.getStructureInode());
@@ -347,15 +341,7 @@ public class Field extends Inode implements Exportable, Importable
 	public void setUnique(boolean unique) {
 		this.unique = unique;
 	}
-
-	public Date getModDate() {
-		return modDate;
-	}
-
-	public void setModDate(Date modDate) {
-		this.modDate = modDate;
-	}
-
+	
 	@Override
 	public String toString() {
 		return ToStringBuilder.reflectionToString(this);

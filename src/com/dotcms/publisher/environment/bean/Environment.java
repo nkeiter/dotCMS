@@ -51,7 +51,7 @@ public class Environment implements Permissionable,Serializable{
 		return false;
 	}
 
-	// End Permissionable methods
+  // End Permissionable methods
 
 	private static final long serialVersionUID = -8154524665918330146L;
 
@@ -78,7 +78,6 @@ public class Environment implements Permissionable,Serializable{
 		this.pushToAll = pushToAll;
 	}
 
-
 	@Override
 	public int hashCode() {		
 		return id.hashCode();
@@ -96,4 +95,3 @@ public class Environment implements Permissionable,Serializable{
 	
 
 }
-

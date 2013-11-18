@@ -20,11 +20,13 @@ public class PushPublisherConfig extends PublisherConfig {
 		CONTENTS,
 		LINKS,
 		RELATIONSHIPS,
-		CATEGORIES
+		CATEGORIES,
+		WORKFLOWS
 	}
 
 	private Operation operation;
 	private List<PublishingEndPoint> endpoints;
+	private boolean pushing = true;
 	private boolean downloading = false;
 
 	public PushPublisherConfig() {
@@ -53,6 +55,11 @@ public class PushPublisherConfig extends PublisherConfig {
 
 	}
 
+    /**
+     * Returns the type of operation we will apply to the bundle (PUBLISH/UNPUBLISH).
+     *
+     * @return
+     */
 	public Operation getOperation() {
 		return operation;
 	}
@@ -159,6 +166,18 @@ public class PushPublisherConfig extends PublisherConfig {
 //		return (Set<String>) get(AssetTypes.LINKS.name());
 //
 //	}
+	
+	@SuppressWarnings("unchecked")
+	public Set<String> getWorkflows() {
+	  if(get(AssetTypes.WORKFLOWS.name()) == null){
+	    Set<String> workflowsToBuild =   new HashSet<String>();
+	    put(AssetTypes.WORKFLOWS.name(), workflowsToBuild);
+	  }
+
+	  return (Set<String>) get(AssetTypes.WORKFLOWS.name());
+
+	}
+	
 	@SuppressWarnings("unchecked")
 	public Set<String> getRelationships() {
 		if(get(AssetTypes.RELATIONSHIPS.name()) == null){
@@ -189,12 +208,24 @@ public class PushPublisherConfig extends PublisherConfig {
 	public void setLinks(Set<String> links) {
 		put(AssetTypes.LINKS.name(), links);
 	}
+	
+	public void setWorkflows(Set<String> workflows) {
+		put(AssetTypes.WORKFLOWS.name(), workflows);
+	}
 //	public void setCategories(Set<String> categories){
 //		put(AssetTypes.CATEGORIES.name(),categories);
 //	}
 //
 	public void setRelationships(Set<String> relationships) {
 		put(AssetTypes.RELATIONSHIPS.name(), relationships);
+	}
+
+	public boolean isPushing() {
+		return pushing;
+	}
+
+	public void setPushing(boolean pushing) {
+		this.pushing = pushing;
 	}
 
     public boolean isDownloading () {

@@ -5,6 +5,7 @@
 <%@page import="com.dotcms.publisher.environment.bean.Environment"%>
 <%@ page import="com.liferay.portal.language.LanguageUtil"%>
 <%@page import="com.dotmarketing.business.Role"%>
+<%@page import="com.dotmarketing.business.PermissionAPI"%>
 <%
 	String identifier = request.getParameter("id");
 	EnvironmentAPI eAPI = APILocator.getEnvironmentAPI();
@@ -22,7 +23,18 @@
 
 	var myRoleReadStore = new dotcms.dojo.data.RoleReadStore({nodeId: "whoCanUseSelect", includeFake:true});
 
-
+	dojo.ready( function(){	        
+		if(dojo.isIE){
+	    	setTimeout(function(){
+	        	var randomParam = Math.floor((Math.random()*10000)+1);
+	            var myRoleReadStoreURL = myRoleReadStore.url;
+	            var dummyVar = new Array();
+	            myRoleReadStore.url = myRoleReadStoreURL+"?randomParam="+randomParam;
+	            myRoleReadStore.fetch({onComplete: dummyVar});
+	        },100);
+	    }
+	});
+	
     function saveEnvironment() {
 
         var form = dijit.byId("formSaveEnvironment");
@@ -74,7 +86,7 @@
             id: "whoCanUseSelect",
             name: "whoCanUseSelect",
             store: myRoleReadStore,
-
+            maxHeight:400,
             pageSize:30,
             searchDelay:300,
             required:false,
@@ -94,7 +106,7 @@
 
 		<% if(currentEnvironment!=null) {
 
-			Set<Role> roles = APILocator.getPermissionAPI().getReadRoles(currentEnvironment);%>
+			Set<Role> roles = APILocator.getPermissionAPI().getRolesWithPermission(currentEnvironment, PermissionAPI.PERMISSION_READ);%>
 			<%for(Role tmpRole :  roles){%>
 				addToWhoCanUse("<%=tmpRole.getId()%>",
 						"<%=(tmpRole.getName().toLowerCase().contains("anonymous")) ? LanguageUtil.get(pageContext, "current-user") + " (" + LanguageUtil.get(pageContext, "Everyone") + ")" : tmpRole.getName()+ ((tmpRole.isSystem()) ? " (" + LanguageUtil.get(pageContext, "User") + ")" : "")%>");
@@ -117,7 +129,7 @@
 
 </style>
 
-<div style="margin:auto;">
+<div style="margin:auto; width:580px; height:360px; overflow:auto;">
 	<div dojoType="dijit.form.Form"  name="formSaveEnvironment"  id="formSaveEnvironment" onsubmit="return false;">
 		<input type="hidden" name="identifier" value="<%=UtilMethods.webifyString(String.valueOf(currentEnvironment.getId())) %>">
 		<table class="myTable" border=0 style="margin: auto" align="center">

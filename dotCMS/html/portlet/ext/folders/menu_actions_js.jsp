@@ -126,9 +126,9 @@
 			self.location = '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/htmlpages/edit_htmlpage" /></portlet:actionURL>&cmd=delete&parent=' + parentId + "&inode=" + objId + '&referer=' + referer + openNodes;
 		}
 	}
-	function deleteContentlet(objId,openNodes,referer, contentStructureType, structure_id) {
+	function deleteContentlet(objId,openNodes,referer) {
 		if (confirm('<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "folder.archive.selected.contentlet")) %>')) {
-			self.location = '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /></portlet:actionURL>&structure_id='+ structure_id + '&contentStructureType=' + contentStructureType + '&cmd=delete&inode=' + objId + '&referer=' + referer + openNodes;
+			self.location = '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /></portlet:actionURL>&cmd=delete&inode=' + objId + '&referer=' + referer + openNodes;
 		}
 	}
 	function deleteFile(objId,parentId,openNodes,referer) {
@@ -574,52 +574,53 @@
 		//}
 	}
 
-	function publishContentlet (objId, userId, referer, live, working, write, contentStructureType, structure_id) {
+	function publishContentlet (objId, userId, referer, live, working, write) {
+
 		//if (write=="1") {
 			var loc = '';
 			referer += "&selected_lang=" + getSelectedLanguageId();
-			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="full_publish_list" /></portlet:actionURL>&structure_id='+ structure_id + '&contentStructureType=' + contentStructureType + '&publishInode=' + objId + '&referer=' + encodeURIComponent(referer);
+			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="full_publish_list" /></portlet:actionURL>&publishInode=' + objId + '&referer=' + encodeURIComponent(referer);
 			top.location = loc;
 		//}
 	}
 
-	function unarchiveContentlet (objId, userId, referer, live, working, write, contentStructureType, structure_id) {
+	function unarchiveContentlet (objId, userId, referer, live, working, write) {
 		//if (write=="1") {
 			var loc = '';
-			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="undelete" /></portlet:actionURL>&structure_id='+ structure_id + '&contentStructureType=' + contentStructureType + '&inode=' + objId + '&referer=' + encodeURIComponent(referer);
+			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="undelete" /></portlet:actionURL>&inode=' + objId + '&referer=' + encodeURIComponent(referer);
 			top.location = loc;
 		//}
 	}
 
-	function copyContentlet (objId, userId, referer, live, working, write, contentStructureType, structure_id) {
+	function copyContentlet (objId, userId, referer, live, working, write) {
 		//if (write=="1") {
 			var loc = '';
-			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="copy" /></portlet:actionURL>&structure_id='+ structure_id + '&contentStructureType=' + contentStructureType + '&inode=' + objId + '&referer=' + encodeURIComponent(referer);
+			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="copy" /></portlet:actionURL>&inode=' + objId + '&referer=' + encodeURIComponent(referer);
 			top.location = loc;
 		//}
 	}
 
-	function unpublishContentlet (objId, userId, referer, live, working, write, contentStructureType, structure_id) {
+	function unpublishContentlet (objId, userId, referer, live, working, write) {
 		//if (write=="1") {
 			var loc = '';
 			referer += "&selected_lang=" + getSelectedLanguageId();
-			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="unpublish" /></portlet:actionURL>&structure_id='+ structure_id + '&contentStructureType=' + contentStructureType + '&inode=' + objId + '&referer=' + encodeURIComponent(referer);
+			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="unpublish" /></portlet:actionURL>&inode=' + objId + '&referer=' + encodeURIComponent(referer);
 			top.location = loc;
 		//}
 	}
 
-	function unlockContentlet (objId, userId, referer, live, working, write, contentStructureType, structure_id) {
+	function unlockContentlet (objId, userId, referer, live, working, write) {
 		//if (write=="1") {
 			var loc = '';
-			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="unlock" /></portlet:actionURL>&structure_id='+ structure_id + '&contentStructureType=' + contentStructureType + '&inode=' + objId + '&referer=' + encodeURIComponent(referer);
+			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="unlock" /></portlet:actionURL>&inode=' + objId + '&referer=' + encodeURIComponent(referer);
 			top.location = loc;
 		//}
 	}
 
-	function fullDeleteContentlet (objId, userId, referer, live, working, write, contentStructureType, structure_id) {
+	function fullDeleteContentlet (objId, userId, referer, live, working, write) {
 		//if (write=="1") {
 			var loc = '';
-			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="full_delete" /></portlet:actionURL>&structure_id='+ structure_id + '&contentStructureType=' + contentStructureType + '&inode=' + objId + '&referer=' + encodeURIComponent(referer);
+			loc += '<portlet:actionURL windowState="<%= WindowState.MAXIMIZED.toString() %>"><portlet:param name="struts_action" value="/ext/contentlet/edit_contentlet" /><portlet:param name="cmd" value="full_delete" /></portlet:actionURL>&inode=' + objId + '&referer=' + encodeURIComponent(referer);
 			top.location = loc;
 		//}
 	}
@@ -711,7 +712,7 @@
 
 	function addToBundle (objId) {
 
-		pushHandler.showAddToBundleDialog(objId, '<%=LanguageUtil.get(pageContext, "Add-To-Bundle")%>');
+	    pushHandler.showAddToBundleDialog(objId, '<%=LanguageUtil.get(pageContext, "Add-To-Bundle")%>');
 
 	}
 

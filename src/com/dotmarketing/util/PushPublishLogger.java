@@ -12,6 +12,7 @@ public class PushPublishLogger {
 	public static void log ( Class cl, String msg ) {
 
         if ( LogMapper.getInstance().isLogEnabled( filename ) ) {
+            Logger.info( cl, msg );
             Logger.info( PushPublishLogger.class, cl.toString() + " : " + msg );
         }
     }
@@ -20,6 +21,7 @@ public class PushPublishLogger {
 	public static void log ( Class cl, String msg, String bundleId ) {
 
         if ( LogMapper.getInstance().isLogEnabled( filename ) ) {
+            Logger.info( cl, " : [BundleID: "+bundleId+"] " + msg  );
             Logger.info( PushPublishLogger.class, cl.toString() + " : [BundleID: "+bundleId+"] " + msg );
         }
     }
@@ -31,9 +33,9 @@ public class PushPublishLogger {
             log( cl, msg , bundleId);
         } else {
             if ( LogMapper.getInstance().isLogEnabled( filename ) ) {
+                Logger.info( cl, " : [BundleID: "+bundleId+"] " + msg + ", User: " + user.getUserId());
                 Logger.info( PushPublishLogger.class, cl.toString() + " : [BundleID: "+bundleId+"] " + msg + ", User: " + user.getUserId());
             }
         }
     }
-
 }

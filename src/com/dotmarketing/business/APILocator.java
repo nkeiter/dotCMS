@@ -299,14 +299,14 @@ public class APILocator extends Locator<APIIndex>{
 	    return (SiteSearchAuditAPI)getInstance(APIIndex.SITE_SEARCH_AUDIT_API);
 	}
 	public static EnvironmentAPI getEnvironmentAPI() {
-		return (EnvironmentAPI)getInstance(APIIndex.ENVIRONMENT_API);
+	    return (EnvironmentAPI)getInstance(APIIndex.ENVIRONMENT_API);
 	}
 	public static BundleAPI getBundleAPI() {
 		return (BundleAPI)getInstance(APIIndex.BUNDLE_API);
 	}
 
 	public static PushedAssetsAPI getPushedAssetsAPI() {
-	    return (PushedAssetsAPI)getInstance(APIIndex.PUSHED_ASSETS_API);
+		return (PushedAssetsAPI)getInstance(APIIndex.PUSHED_ASSETS_API);
 	}
 
 	private static Object getInstance(APIIndex index) {

@@ -120,6 +120,7 @@ public abstract class Publisher implements IPublisher {
 
 	}
 
+
     /**
      * This method verifies if a given file should be process it in order to be add it to a site search index or not.
      *

@@ -47,12 +47,13 @@
     }
 
     function goToEditEnvironment(identifier){
+    	var y = Math.floor(Math.random()*1123213213);
         var dialog = new dijit.Dialog({
             id: 'addEnvironment',
             title: "<%= LanguageUtil.get(pageContext, "publisher_Edit_Environment_Title")%>",
-            style: "width: 600px; ",
+            style: "width: 600px; height: 400px;",
             content: new dojox.layout.ContentPane({
-                href: "/html/portlet/ext/contentlet/publishing/add_publish_environment.jsp?op=edit&id="+identifier
+                href: "/html/portlet/ext/contentlet/publishing/add_publish_environment.jsp?op=edit&id="+identifier+"&random="+y
             }),
             onHide: function() {
                 var dialog=this;
@@ -321,7 +322,7 @@
                 <%= LanguageUtil.get(pageContext, "Servers") %>
             </th>
             <th nowrap="nowrap">
-                <%= LanguageUtil.get(pageContext, "Push-To-All") %>
+                <%= LanguageUtil.get(pageContext, "publisher_Environment_Push_Mode") %>
             </th>
             <th nowrap="nowrap">
            	 <%= LanguageUtil.get(pageContext, "Actions") %>
@@ -342,7 +343,7 @@
                 <a style="cursor: pointer" onclick="goToEditEnvironment('<%=environment.getId()%>')" title="<%= LanguageUtil.get(pageContext, "publisher_Edit_Environment_Title") %>">
                     <span class="editIcon"></span></a>
             </td>
-            <td valign="top" nowrap="nowrap">
+            <td valign="top" nowrap="nowrap" style="cursor: pointer" onclick="goToEditEnvironment('<%=environment.getId()%>')">
                 <b><%=environment.getName()%></b>
             </td>
             <td style="padding:0px;" valign="top">
@@ -381,7 +382,12 @@
 
             </td>
             <td align="center" valign="top" nowrap="nowrap">
-                <%=environment.getPushToAll()%>
+            
+            <%if(environment.getPushToAll()){%>
+            	<%= LanguageUtil.get(pageContext, "publisher_Environments_Push_To_All") %>
+            <%}else{ %>
+				<%= LanguageUtil.get(pageContext, "publisher_Environments_Push_To_One") %>
+			<%} %>
             </td>
             <td valign="top" nowrap="nowrap">
                 <button dojoType="dijit.form.Button" onClick="goToAddEndpoint('<%=environment.getId()%>', 'false');" iconClass="plusIcon">

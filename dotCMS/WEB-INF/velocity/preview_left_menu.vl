@@ -146,9 +146,11 @@
     	parent.remotePublish();
     }
 
+
     function addToBundleCall(){
-    	parent.addToBundle();
+      	parent.addToBundle();
     }
+
     function editTemplate(){
             //document.getElementById('htmlPage').value='$htmlPageInode';
             document.getElementById('cmd').value="editTemplate";
@@ -252,6 +254,7 @@
                 	<span class="publishIcon"></span> $languagewebapi.getFromUserLanguage("modes.Publish-Page")
                 </a>
                 #if($REMOTE_PUBLISH_HTMLPAGE_PERMISSION)
+
                     #if($REMOTE_PUBLISH_END_POINTS)
                         <a href="javascript: remotePublishCall();">
                             <span class="sServerIcon"></span> $languagewebapi.getFromUserLanguage("modes.Remote-Publish-Page")
@@ -260,6 +263,7 @@
 	                 <a href="javascript: addToBundleCall();">
 	                	<span class="bundleIcon"></span> $languagewebapi.getFromUserLanguage("modes.Add-To-Bundle-Page")
 	                </a>
+
                 #end
             #else
 				<span class="disabled">
@@ -489,6 +493,16 @@
     <input type="hidden" name="parentFolder" id="parentFolder" value=""><BR>
 </form>
 </div>
+
+<iframe name="hidden_iframe" id="dot_keep_alive_hidden_iframe" style="position:absolute;top:-100px;width:0px; height:0px; border: 0px;"></iframe>
+<script>
+	function setKeepAlive(){
+		var myId=document.getElementById("dot_keep_alive_hidden_iframe");
+		myId.src ="/html/common/keep_alive.jsp?r=" + Math.random();
+	}
+	// 15 minutes
+	setTimeout("setKeepAlive()", 60000 * 15);
+</script>
 
 </body>
 </html>

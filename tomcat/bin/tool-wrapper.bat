@@ -18,38 +18,26 @@ if "%OS%" == "Windows_NT" setlocal
 rem ---------------------------------------------------------------------------
 rem Wrapper script for command line tools
 rem
-rem Environment Variable Prerequisites
+rem Environment Variable Prequisites
 rem
-rem   CATALINA_HOME   May point at your Catalina "build" directory.
+rem   CATALINA_HOME May point at your Catalina "build" directory.
 rem
-rem   TOOL_OPTS       (Optional) Java runtime options.
+rem   TOOL_OPTS     (Optional) Java runtime options used when the "start",
+rem                 "stop", or "run" command is executed.
 rem
-rem   JAVA_HOME       Must point at your Java Development Kit installation.
-rem                   Using JRE_HOME instead works as well.
+rem   JAVA_HOME     Must point at your Java Development Kit installation.
 rem
-rem   JRE_HOME        Must point at your Java Runtime installation.
-rem                   Defaults to JAVA_HOME if empty. If JRE_HOME and JAVA_HOME
-rem                   are both set, JRE_HOME is used.
+rem   JAVA_OPTS     (Optional) Java runtime options used when the "start",
+rem                 "stop", or "run" command is executed.
 rem
-rem   JAVA_OPTS       (Optional) Java runtime options.
-rem
-rem   JAVA_ENDORSED_DIRS (Optional) Lists of of semi-colon separated directories
-rem                   containing some jars in order to allow replacement of APIs
-rem                   created outside of the JCP (i.e. DOM and SAX from W3C).
-rem                   It can also be used to update the XML parser implementation.
-rem                   Defaults to $CATALINA_HOME/endorsed.
-rem
-rem $Id: tool-wrapper.bat 1138835 2011-06-23 11:27:57Z rjung $
+rem $Id: tool-wrapper.bat 908749 2010-02-10 23:26:42Z markt $
 rem ---------------------------------------------------------------------------
 
 rem Guess CATALINA_HOME if not defined
-set "CURRENT_DIR=%cd%"
 if not "%CATALINA_HOME%" == "" goto gotHome
-set "CATALINA_HOME=%CURRENT_DIR%"
+set CATALINA_HOME=.
 if exist "%CATALINA_HOME%\bin\tool-wrapper.bat" goto okHome
-cd ..
-set "CATALINA_HOME=%cd%"
-cd "%CURRENT_DIR%"
+set CATALINA_HOME=..
 :gotHome
 if exist "%CATALINA_HOME%\bin\tool-wrapper.bat" goto okHome
 echo The CATALINA_HOME environment variable is not defined correctly
@@ -70,18 +58,18 @@ echo Cannot find "%CATALINA_HOME%\bin\setclasspath.bat"
 echo This file is needed to run this program
 goto end
 :okSetclasspath
-call "%CATALINA_HOME%\bin\setclasspath.bat" %1
-if errorlevel 1 goto end
+set "BASEDIR=%CATALINA_HOME%"
+call "%CATALINA_HOME%\bin\setclasspath.bat"
 
 rem Add on extra jar files to CLASSPATH
 rem Note that there are no quotes as we do not want to introduce random
 rem quotes into the CLASSPATH
-if "%CLASSPATH%" == "" goto emptyClasspath
-set "CLASSPATH=%CLASSPATH%;"
-:emptyClasspath
-set "CLASSPATH=%CLASSPATH%%CATALINA_HOME%\bin\bootstrap.jar;%CATALINA_HOME%\bin\tomcat-juli.jar;%CATALINA_HOME%\lib\servlet-api.jar"
-
-set JAVA_OPTS=%JAVA_OPTS% -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager
+if "%CLASSPATH%" == "" goto noclasspath
+set "CLASSPATH=%CLASSPATH%;%CATALINA_HOME%\bin\bootstrap.jar;%BASEDIR%\lib\servlet-api.jar"
+goto okclasspath
+:noclasspath
+set "CLASSPATH=%CATALINA_HOME%\bin\bootstrap.jar;%BASEDIR%\lib\servlet-api.jar"
+:okclasspath
 
 rem Get remaining unshifted command line arguments and save them in the
 set CMD_LINE_ARGS=

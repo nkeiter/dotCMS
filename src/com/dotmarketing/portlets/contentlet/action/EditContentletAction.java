@@ -86,6 +86,7 @@ import com.dotmarketing.util.HostUtil;
 import com.dotmarketing.util.InodeUtils;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.PortletURLUtil;
+import com.dotmarketing.util.UUIDGenerator;
 import com.dotmarketing.util.UtilHTML;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.WebKeys;
@@ -97,6 +98,7 @@ import com.liferay.portal.model.User;
 import com.liferay.portal.util.Constants;
 import com.liferay.portlet.ActionRequestImpl;
 import com.liferay.portlet.ActionResponseImpl;
+import com.liferay.util.FileUtil;
 import com.liferay.util.servlet.SessionMessages;
 
 public class EditContentletAction extends DotPortletAction implements DotPortletActionInterface {
@@ -137,25 +139,10 @@ public class EditContentletAction extends DotPortletAction implements DotPortlet
 		String referer = req.getParameter("referer");
 
 		Logger.debug(this, "EditContentletAction cmd=" + cmd);
-		
-		User user = _getUser(req);
-		
-		//GIT-2816
-		if ((cmd != null) && (cmd.equals(Constants.EDIT) 
-				|| cmd.equals(com.dotmarketing.util.Constants.NEW) 
-				|| cmd.equals(com.dotmarketing.util.Constants.NEW_EDIT))) {
-			
-			List<String> tempBinaryImageInodes = (List<String>) ses.getAttribute(Contentlet.TEMP_BINARY_IMAGE_INODES_LIST);
-			
-			if(UtilMethods.isSet(tempBinaryImageInodes) && tempBinaryImageInodes.size() > 0){
-				for(String inode : tempBinaryImageInodes){
-					conAPI.delete(conAPI.find(inode, user, false), user, false, true);
-				}
-				tempBinaryImageInodes.clear();
-			}
-		}
 
 		HibernateUtil.startTransaction();
+
+		User user = _getUser(req);
 
 		// retrieve current host
 		currentHost = HostUtil.hostNameUtil(req, user);
@@ -167,7 +154,7 @@ public class EditContentletAction extends DotPortletAction implements DotPortlet
 		ses.setAttribute(com.dotmarketing.util.WebKeys.LAYOUT, layout);
 
 
-		int structureType = req.getParameter("contentStructureType") == null ? 0:Integer.valueOf(req.getParameter("contentStructureType"));
+		int structureType = req.getParameter("contype") == null ? 0:Integer.valueOf(req.getParameter("contype"));
 		if(structureType==Structure.STRUCTURE_TYPE_FORM){
 			if(InodeUtils.isSet(req.getParameter("structure_id"))){
 				referer=referer+"&structure_id="+req.getParameter("structure_id");
@@ -750,6 +737,10 @@ public class EditContentletAction extends DotPortletAction implements DotPortlet
 			if (InodeUtils.isSet(req.getParameter("selectedStructure"))) {
 				selectedStructure = req.getParameter("selectedStructure");
 				st = (Structure) InodeFactory.getInode(selectedStructure, Structure.class);
+			} else if (InodeUtils.isSet(req.getParameter("contentcontainer_inode"))) {
+				String containerInode = req.getParameter("contentcontainer_inode");
+				Container container = (Container) InodeFactory.getInode(containerInode, Container.class);
+				st = (Structure) InodeFactory.getInode(container.getStructureInode(), Structure.class);
 			}else if (InodeUtils.isSet(req.getParameter("sibblingStructure"))) {
 				selectedStructure = req.getParameter("sibblingStructure");
 				st = (Structure) InodeFactory.getInode(selectedStructure, Structure.class);
@@ -905,7 +896,9 @@ public class EditContentletAction extends DotPortletAction implements DotPortlet
 			structure = (Structure) InodeFactory.getInode(selectedStructure, Structure.class);
 			contentlet.setStructureInode(structure.getInode());
 		} else if (cmd.equals("newedit")) {
-			structure = StructureFactory.getDefaultStructure();
+			String containerInode = req.getParameter("contentcontainer_inode");
+			Container container = (Container) InodeFactory.getInode(containerInode, Container.class);
+			structure = (Structure) InodeFactory.getInode(container.getStructureInode(), Structure.class);
 			contentlet.setStructureInode(structure.getInode());
 		}
 
@@ -1045,6 +1038,22 @@ public class EditContentletAction extends DotPortletAction implements DotPortlet
 				for (Field field : list) {
 					if(field.getFieldContentlet().startsWith("binary")){
 						httpReq.getSession().setAttribute(field.getFieldContentlet() + "-sibling", sib+","+field.getVelocityVarName());
+						java.io.File inputFile = APILocator.getContentletAPI().getBinaryFile(sib, field.getVelocityVarName(), user);
+						java.io.File acopyFolder=new java.io.File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
+                                + java.io.File.separator + user.getUserId() + java.io.File.separator + field.getFieldContentlet()
+                                + java.io.File.separator + UUIDGenerator.generateUuid());
+						
+						if(!acopyFolder.exists())
+                            acopyFolder.mkdir();
+						
+						String shortFileName = FileUtil.getShortFileName(inputFile.getAbsolutePath());
+						
+						java.io.File binaryFile = new java.io.File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
+								+ java.io.File.separator + user.getUserId() + java.io.File.separator + field.getFieldContentlet()
+								+ java.io.File.separator + shortFileName.trim());
+						
+						FileUtil.copyFile(inputFile, binaryFile);
+						
 					}
 				}
 			}

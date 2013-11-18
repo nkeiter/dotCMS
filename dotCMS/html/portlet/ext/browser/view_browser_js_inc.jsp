@@ -1182,20 +1182,20 @@ dojo.require("dotcms.dojo.push.PushHandler");
 	   		else
 	   			fullName = shortenString(newName, 30) + "." + ext;
 	   		showDotCMSSystemMessage("<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "Name-changed")) %>");
+	   		
+			//Emptying the assets rigth hand side listing
+			cleanContentSide();
+
+		    //Showing the loading message
+		    Element.show('loadingContentListing');
+		    
+		    setTimeout('reloadContent()',1000);
+		    if(data.assetType == "folder"){
+			    setTimeout(function(){
+			    	BrowserAjax.getTree(myHostId, initializeTree);
+			    },1000);
+		    }
 		} else {
-			var asset = inodes[inode];
-            if (asset.type == 'folder') {
-                    inodes[inode].name = lastName;
-            }
-            if (asset.type == 'file_asset') {
-                    inodes[inode].fileName = lastName + "." + ext;
-            }
-            if (asset.type == 'links') {
-                    inodes[inode].title = lastName;
-            }
-            if (asset.type == 'htmlpage') {
-                    inodes[inode].pageUrl = lastName + "." + ext;
-            }
 			if (ext == null || ext == "")
 	   			fullName = shortenString(lastName, 30) + "";
 	   		else
@@ -1203,10 +1203,7 @@ dojo.require("dotcms.dojo.push.PushHandler");
 	   		showDotCMSErrorMessage("<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "Name-change-failed")) %> " + data.errorReason);
 		}
 
-   	 	if ($(inode + '-NameSPAN') != null)
-	   	 	Element.update(inode + '-NameSPAN', fullName);
-   	 	if ($(inode + '-TreeFolderName') != null)
-			Element.update(inode + '-TreeFolderName', fullName);
+   	 	
      }
 
      function enableChangeContentShowOnMenu (inode) {
@@ -1502,15 +1499,11 @@ dojo.require("dotcms.dojo.push.PushHandler");
 	}
 
 	function remotePublish (objId) {
-
 		pushHandler.showDialog(objId);
-
 	}
 
 	function addToBundle (objId) {
-
-		pushHandler.showAddToBundleDialog(objId, '<%=LanguageUtil.get(pageContext, "Add-To-Bundle")%>');
-
+    	pushHandler.showAddToBundleDialog(objId, '<%=LanguageUtil.get(pageContext, "Add-To-Bundle")%>');
 	}
 
 	function unpublishHTMLPage (objId, referer) {

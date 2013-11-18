@@ -43,9 +43,9 @@ abstract class WorkflowSQL {
 	protected static String INSERT_SCHEME_FOR_STRUCT= "insert into workflow_scheme_x_structure (id, scheme_id, structure_id) values ( ?, ?, ?)";
 	protected static String SELECT_SCHEME_BY_STRUCT= "select * from workflow_scheme, workflow_scheme_x_structure where workflow_scheme.id = workflow_scheme_x_structure.scheme_id and workflow_scheme_x_structure.structure_id = ?";
 	
-	protected static String INSERT_SCHEME= "insert into workflow_scheme (id, name, description, archived, mandatory, entry_action_id, default_scheme) values (?,?,?,?,?,?,?)";
+	protected static String INSERT_SCHEME= "insert into workflow_scheme (id, name, description, archived, mandatory, entry_action_id, default_scheme, mod_date) values (?,?,?,?,?,?,?,?)";
 	
-	protected static String UPDATE_SCHEME= "update workflow_scheme set name = ?,description =?, archived=?,mandatory=?,entry_action_id=? where id =? ";
+	protected static String UPDATE_SCHEME= "update workflow_scheme set name = ?,description =?, archived=?,mandatory=?,entry_action_id=?, mod_date=? where id =? ";
 	
 	protected static String SELECT_STEPS_BY_SCHEME= "select * from workflow_step where scheme_id = ? order by  my_order";
 	protected static String SELECT_ACTIONS_BY_STEP= "select * from workflow_action where step_id = ? order by  my_order";
@@ -74,6 +74,7 @@ abstract class WorkflowSQL {
 	protected static String INSERT_ACTION_CLASS_PARAM= "insert into workflow_action_class_pars (id,workflow_action_class_id,key,value) values (?,?, ?, ?)";
 	protected static String UPDATE_ACTION_CLASS_PARAM= "update workflow_action_class_pars set workflow_action_class_id= ?, key=?, value=? where id =?";
 	protected static String DELETE_ACTION_CLASS_PARAM_BY_ACTION_CLASS= "delete from workflow_action_class_pars where workflow_action_class_id =?";
+	protected static String DELETE_ACTION_CLASS_PARAM_BY_ID="delete from workflow_action_pars where id=?";
 
 	// chri
     protected static String UPDATE_USER_ASSIGNTO_TASK = "update workflow_task set assigned_to = ? where id = ?";

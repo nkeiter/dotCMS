@@ -198,7 +198,7 @@ var theme = 'dmundra';
 		#set($tabCount = 0)
 		#set($titleField = $structures.findFieldByVarName($structure, "formTitle"))
 		#set($firstField = $fields.get(0))
-		#set($firstTabId = "contentTab")
+		#set($firstTabId = "Start")
 		#set($firstFieldSetId = "contentFieldSet")
 		#if($UtilMethods.isSet(${titleField.values}))
 			#set($firstTabName = "${titleField.values}")
@@ -605,6 +605,8 @@ var theme = 'dmundra';
 	            	    	#set($fieldDefaultValue = $date.toDate('yyyy-MM-dd',$request.getParameter("$field.velocityVarName")))
 	            	    #elseif($UtilMethods.isSet($tempVelocityVar) && $tempVelocityVar.indexOf('\$') == -1)
 	            	    	#set($fieldDefaultValue = $tempVelocityVar)
+	            	    #elseif($UtilMethods.isSet($field.defaultValue))
+	            	    	#set($fieldDefaultValue = $date.toDate('yyyy-MM-dd',$!field.defaultValue))
 	            	    #else
 	            	    	#set($fieldDefaultValue = $UtilMethods.getCurrentDate())
 	            	    #end
@@ -631,6 +633,8 @@ var theme = 'dmundra';
 	            	    	#set($fieldDefaultValue = $UtilMethods.htmlDateTimeToDate("$temp_currentDate $temp_currentDateTime"))
 	            	    #elseif($UtilMethods.isSet($tempVelocityVar) && $tempVelocityVar.indexOf('\$') == -1)
 	            	    	#set($fieldDefaultValue = $tempVelocityVar)
+	            	    #elseif($UtilMethods.isSet($field.defaultValue))
+	            	    	#set($fieldDefaultValue = $date.toDate('HH:mm',$!field.defaultValue))
 	            	    #else
 	            	    	#set($fieldDefaultValue = $UtilMethods.getCurrentDate())
 	            	    #end
@@ -658,6 +662,8 @@ var theme = 'dmundra';
 	            	    	#set($fieldDefaultValue = $UtilMethods.htmlDateTimeToDate("$temp_currentDate $temp_currentDateTime"))
 	            	    #elseif($UtilMethods.isSet($tempVelocityVar) && $tempVelocityVar.indexOf('\$') == -1)
 	            	    	#set($fieldDefaultValue = $tempVelocityVar)
+	            	    #elseif($UtilMethods.isSet($field.defaultValue))
+	            	    	#set($fieldDefaultValue = $date.toDate('yyyy-MM-dd HH:mm',$!field.defaultValue))
 	            	    #else
 	            	    	#set($fieldDefaultValue = $UtilMethods.getCurrentDate())
 	            	    #end
@@ -1002,6 +1008,18 @@ var theme = 'dmundra';
 							return false;
 						}
 					#end
+					#if("$field.getFieldType().toUpperCase()"=="KEY_VALUE")
+						customErrorMessages["$field.velocityVarName"]="$customErrorMessages";
+						var ${field.velocityVarName}Empty = "$text.getFromSessionLanguage('org.dotcms.frontend.content.submission.keyval.empty')";
+						if(document.getElementById("${fieldAux.velocityVarName}list").value == ${field.velocityVarName}Empty){
+							if(customErrorMessages["$field.velocityVarName"] != "")
+								document.getElementById("alert"+"${field.velocityVarName}").innerHTML = customErrorMessages["$field.velocityVarName"];
+							else
+								document.getElementById("alert"+"${field.velocityVarName}").innerHTML = ${field.velocityVarName}Empty;
+
+							return false;
+						}
+					#end
 				#end
 
 
@@ -1047,13 +1065,20 @@ var theme = 'dmundra';
     return true;
 }
 
+var captcha_audio_play;
+
 	function playAudioCaptcha(){
-		document.getElementById('captcha-audio-play').setAttribute("class","captcha-audio-playing");
+		captcha_audio_play = document.getElementById('captcha-audio-play');
+		captcha_audio_play.setAttribute("class","captcha-audio-playing");
 		var rand=Math.floor(Math.random()*999999999);
-		document.getElementById('captcha-audio').innerHTML = '<embed hidden="false" src="/audioCaptcha.wav?r=' + rand +'" id="captcha-sound" controller="false" width="0" height="0" autoplay="true" autostart="true" type="audio/wav" />';
+		if(dojo.isIE){
+			document.getElementById('captcha-audio').innerHTML = '<embed hidden="false" src="/audioCaptcha.wav?r=' + rand +'" id="captcha-sound" controller="false" width="0" height="0" autoplay="true" autostart="true" type="audio/wav" />';
+		}else{
+			document.getElementById('captcha-audio').innerHTML = '<audio hidden="false" src="/audioCaptcha.wav?r=' + rand +'" id="captcha-sound" controller="false" width="0" height="0" autoplay="true" autostart="true" type="audio/wav" />';
+		}
 
 		setTimeout(function(){
-			document.getElementById('captcha-audio-play').setAttribute("class","captcha-audio-play");
+			captcha_audio_play.setAttribute("class","audio-play");
 		},8000);
 
 	}

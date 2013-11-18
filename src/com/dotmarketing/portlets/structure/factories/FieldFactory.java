@@ -1,7 +1,6 @@
 package com.dotmarketing.portlets.structure.factories;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -97,14 +96,12 @@ public class FieldFactory {
 	//### CREATE AND UPDATE ###
 	public static void saveField(Field field) throws DotHibernateException
 	{
-		field.setModDate(new Date());
 		HibernateUtil.saveOrUpdate(field);
 		FieldsCache.removeFieldVariables(field);
 	}
 
 	public static void saveField(Field field, String existingId) throws DotHibernateException
 	{
-		field.setModDate(new Date());
 		HibernateUtil.saveWithPrimaryKey(field, existingId);
 	}
 
@@ -119,7 +116,12 @@ public class FieldFactory {
 	{
 		InodeFactory.deleteInode(field);
 		FieldsCache.removeField(field);
-		FieldsCache.removeFieldVariables(field);
+
+		List<FieldVariable> fieldVars = getFieldVariablesForField(field);
+		for (FieldVariable var : fieldVars) {
+			deleteFieldVariable(var);
+		}
+
 	}
 
 	public static String getNextAvaliableFieldNumber (String dataType, String currentFieldInode, String structureInode) {
@@ -174,7 +176,7 @@ public class FieldFactory {
 
 		if(InodeUtils.isSet(id)) {
 			try {
-				HibernateUtil.saveOrUpdate(fieldVar);
+				HibernateUtil.update(fieldVar);
 			} catch (DotHibernateException e) {
 				Logger.error(FieldFactory.class, e.getMessage());
 			}
@@ -187,14 +189,6 @@ public class FieldFactory {
 		}
 		FieldsCache.removeField(proxy);
 		FieldsCache.removeFieldVariables(proxy);
-
-		Field f = getFieldByInode(fieldVar.getFieldId());
-		f.setModDate(new Date());
-		try {
-			saveField(f);
-		} catch (DotHibernateException e) {
-			Logger.error(FieldFactory.class, e.getMessage());
-		}
 
 
 	}

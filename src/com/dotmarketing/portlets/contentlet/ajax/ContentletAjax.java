@@ -5,7 +5,6 @@ import static com.dotmarketing.business.PermissionAPI.PERMISSION_READ;
 import static com.dotmarketing.business.PermissionAPI.PERMISSION_WRITE;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -49,7 +48,6 @@ import com.dotmarketing.portlets.contentlet.business.DotLockException;
 import com.dotmarketing.portlets.contentlet.business.web.ContentletWebAPI;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.util.ContentletUtil;
-import com.dotmarketing.portlets.fileassets.business.FileAssetAPI;
 import com.dotmarketing.portlets.fileassets.business.FileAssetValidationException;
 import com.dotmarketing.portlets.form.business.FormAPI;
 import com.dotmarketing.portlets.hostadmin.business.CopyHostContentUtil;
@@ -898,10 +896,8 @@ public class ContentletAjax {
 			                        :  (s.getStructureType() ==3)
 			                        ? "formIcon"
 			                                : "fileIcon";
-			String typeStringToShow = s.getName() + " - " + s.getVelocityVarName();
-			if(s.getName().trim().replace(" ", "").toLowerCase().equals(s.getVelocityVarName().toLowerCase())){
-				typeStringToShow = s.getName();
-			}
+			String typeStringToShow = s.getName() ;
+
 			searchResult.put("__type__", "<div class='typeCCol'><span class='" + spanClass +"'></span>&nbsp;" + typeStringToShow +"</div>");
 			
 			String fieldValue = UtilMethods.dateToHTMLDate(con.getModDate()) + " " + UtilMethods.dateToHTMLTime(con.getModDate());
@@ -1210,8 +1206,6 @@ public class ContentletAjax {
 		List<String> saveContentErrors = new ArrayList<String>();
 
 		HttpServletRequest req = WebContextFactory.get().getHttpServletRequest();
-		Config.CONTEXT.setAttribute("WEB_SERVER_HTTP_PORT", Integer.toString(req.getServerPort()));
-		Config.CONTEXT.setAttribute("WEB_SERVER_SCHEME", req.getScheme().toString());
 		User user = com.liferay.portal.util.PortalUtil.getUser((HttpServletRequest)req);
 
 		// get the struts_action from the form data
@@ -1276,42 +1270,27 @@ public class ContentletAjax {
 				String binaryFileValue = (String) elementValue;
 				File binaryFile = null;
 				if(UtilMethods.isSet(binaryFileValue) && !binaryFileValue.equals("---removed---")){
-					Contentlet binaryContentlet =  new Contentlet();
-					try{
-						binaryContentlet = conAPI.find(binaryFileValue, user, false);
-					}catch(Exception e){}
-					if(UtilMethods.isSet(binaryContentlet) && UtilMethods.isSet(binaryContentlet.getInode())){
-						try {
-							elementValue = binaryContentlet.getBinary(FileAssetAPI.BINARY_FIELD);
-							binaryFile = new File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
-									+ File.separator + user.getUserId() + File.separator + "binary1"
-									+ File.separator + ((File)elementValue).getName());
-							if(binaryFile.exists())
-								elementValue = binaryFile;
-						} catch (IOException e) {}
-					}else{
-						binaryFileValue = ContentletUtil.sanitizeFileName(binaryFileValue);
-						binaryFile = new File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
-								+ File.separator + user.getUserId() + File.separator + elementName
-								+ File.separator + binaryFileValue);
-						if(binaryFile.exists()) {
-	    					try {
-	    					    // https://github.com/dotCMS/dotCMS/issues/35
-	    					    // making a copy just in case the transaction fails so
-	    					    // we can have the file for possible next attempts
-	                            File acopyFolder=new File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
-	                                    + File.separator + user.getUserId() + File.separator + elementName
-	                                    + File.separator + UUIDGenerator.generateUuid());
-	                            if(!acopyFolder.exists())
-	                                acopyFolder.mkdir();
-	                            File acopy=new File(acopyFolder, binaryFileValue);
-	                            FileUtil.copyFile(binaryFile, acopy);
-	                            elementValue = acopy;
-	                        } catch (Exception e) {
-	                            Logger.error(this, "can't make a copy of the uploaded file:" + e, e);
-	                            throw new SystemException(e);
-	                        }
-						}
+					binaryFileValue = ContentletUtil.sanitizeFileName(binaryFileValue);
+					binaryFile = new File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
+							+ File.separator + user.getUserId() + File.separator + elementName
+							+ File.separator + binaryFileValue.trim());
+					if(binaryFile.exists()) {
+    					try {
+    					    // https://github.com/dotCMS/dotCMS/issues/35
+    					    // making a copy just in case the transaction fails so
+    					    // we can have the file for possible next attempts
+                            File acopyFolder=new File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
+                                    + File.separator + user.getUserId() + File.separator + elementName
+                                    + File.separator + UUIDGenerator.generateUuid());
+                            if(!acopyFolder.exists())
+                                acopyFolder.mkdir();
+                            File acopy=new File(acopyFolder, binaryFileValue);
+                            FileUtil.copyFile(binaryFile, acopy);
+                            elementValue = acopy;
+                        } catch (Exception e) {
+                            Logger.error(this, "can't make a copy of the uploaded file:" + e, e);
+                            throw new SystemException(e);
+                        }
 					}
 				}else{
 					elementValue = null;
@@ -1439,16 +1418,6 @@ public class ContentletAjax {
 			            FileUtil.deltree(tmp);
 			        }
 			    }
-			}
-			
-			HttpSession ses = req.getSession();
-			List<String> tempBinaryImageInodes = (List<String>) ses.getAttribute(Contentlet.TEMP_BINARY_IMAGE_INODES_LIST);
-			
-			if(UtilMethods.isSet(tempBinaryImageInodes) && tempBinaryImageInodes.size() > 0){
-				for(String inode : tempBinaryImageInodes){
-					conAPI.delete(conAPI.find(inode, user, false), user, false, true);
-				}
-				tempBinaryImageInodes.clear();
 			}
 		}
 		
@@ -1638,15 +1607,6 @@ public class ContentletAjax {
 			HttpServletRequest req =WebContextFactory.get().getHttpServletRequest();
 			User user = com.liferay.portal.util.PortalUtil.getUser(req);
 			//contentletWebAPI.cancelContentEdit(workingContentletInode,currentContentletInode,user);
-			HttpSession ses = req.getSession();
-			List<String> tempBinaryImageInodes = (List<String>) ses.getAttribute(Contentlet.TEMP_BINARY_IMAGE_INODES_LIST);
-			
-			if(UtilMethods.isSet(tempBinaryImageInodes) && tempBinaryImageInodes.size() > 0){
-				for(String inode : tempBinaryImageInodes){
-					conAPI.delete(conAPI.find(inode, user, false), user, false, true);
-				}
-				tempBinaryImageInodes.clear();
-			}
 		}
 		catch(Exception ae){
 			Logger.debug(this, "Error trying to cancelContentEdit");
@@ -1959,76 +1919,6 @@ public class ContentletAjax {
 		return ret;
 	}
 
-	public Map<String, Object> saveBinaryFileOnContent(String fileName, String fieldInode) throws DotContentletValidationException, Exception{
-		
-		Map<String,Object> callbackData = new HashMap<String,Object>();
-		if(!UtilMethods.isImage(fileName)){
-			return callbackData;
-		}
-		
-		HttpServletRequest req = WebContextFactory.get().getHttpServletRequest();
-		User user = com.liferay.portal.util.PortalUtil.getUser((HttpServletRequest)req);
-		Contentlet newCont = new Contentlet();
-		
-		Structure fileAssetStr = StructureCache.getStructureByVelocityVarName(FileAssetAPI.DEFAULT_FILE_ASSET_STRUCTURE_VELOCITY_VAR_NAME);
-		
-		ContentletAPI conAPI = APILocator.getContentletAPI();
-		
-		newCont.setStructureInode(fileAssetStr.getInode());
-		
-		try {
-			
-			newCont.setLanguageId(APILocator.getLanguageAPI().getDefaultLanguage().getId());
-			
-			for(Field field : FieldsCache.getFieldsByStructureVariableName(fileAssetStr.getInode())){
-				if(field.getVelocityVarName().equals(FileAssetAPI.TITLE_FIELD))
-					conAPI.setContentletProperty(newCont, field, fileName);
-				
-				if(field.getVelocityVarName().equals(FileAssetAPI.HOST_FOLDER_FIELD))
-					conAPI.setContentletProperty(newCont, field, APILocator.getHostAPI().findSystemHost().getInode());
-				
-				if(field.getVelocityVarName().equals(FileAssetAPI.BINARY_FIELD)){
-					
-					File binaryFile = null;
-					if(UtilMethods.isSet(fileName)){
-						fileName = ContentletUtil.sanitizeFileName(fileName);
-						binaryFile = new File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
-								+ File.separator + user.getUserId() + File.separator + FieldsCache.getField(fieldInode).getFieldContentlet()
-								+ File.separator + fileName.trim());
-						}
-					
-					conAPI.setContentletProperty(newCont, field, binaryFile);
-				}
-			}
-			
-			newCont = conAPI.checkin(newCont, user, false);
-			
-		} catch (Exception e) {
-			Logger.error(this,"Contentlet failed while creating new binary content",e);
-		}
-		
-		// clean up tmp_binary
-		if(newCont !=null ) {
-		    Field field = FieldsCache.getField(fieldInode);
-	        if(field.getFieldType().equals(FieldType.BINARY.toString())) {
-	            File tmp=new File(APILocator.getFileAPI().getRealAssetPathTmpBinary()
-	                    +File.separator+user.getUserId()+File.separator+field.getFieldContentlet());
-	            FileUtil.deltree(tmp);
-	        }
-		}
-		
-		callbackData.put("contentletInode", newCont.getInode());
-		
-		HttpSession ses = req.getSession();
-		List<String> tempBinaryImageInodes = (List<String>) ses.getAttribute(Contentlet.TEMP_BINARY_IMAGE_INODES_LIST);
-		
-		if(!UtilMethods.isSet(tempBinaryImageInodes))
-			ses.setAttribute(Contentlet.TEMP_BINARY_IMAGE_INODES_LIST, new ArrayList<String>());
-		
-		tempBinaryImageInodes = (List<String>) ses.getAttribute(Contentlet.TEMP_BINARY_IMAGE_INODES_LIST);
-		tempBinaryImageInodes.add(newCont.getInode());
-		
-		return callbackData;
-	}
+
 }
 

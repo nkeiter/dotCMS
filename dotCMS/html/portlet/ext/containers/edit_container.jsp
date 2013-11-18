@@ -1,4 +1,3 @@
-<%@page import="org.apache.jasper.tagplugins.jstl.core.ForEach"%>
 <%@ page import="com.dotmarketing.portlets.user.factories.*" %>
 <%@ page import="com.dotmarketing.portlets.user.model.*" %>
 <%@ page import="com.dotmarketing.beans.Identifier" %>
@@ -171,6 +170,23 @@
 				<dd><input type="text" dojoType="dijit.form.TextBox" style="width:30" maxlength="2" name="maxContentlets" id="maxContentlets" onchange="showHideCode()" value="<%= form.getMaxContentlets() %>" /></dd>
 			</dl>
 
+			<dl id="structureControls">
+				<dt><%= LanguageUtil.get(pageContext, "Content-Type") %>:&nbsp;</dt>
+				<dd>
+					<select dojoType="dijit.form.FilteringSelect" name="structureInode" id="structureSelect" onchange="structureChanged()" value="<%= form.getStructureInode() %>">
+<%
+					for (Structure structure: structures) {
+%>
+						<option value="<%= structure.getInode() %>"><%= structure.getName() %></option>
+<%
+					}
+%>
+					</select>
+				</dd>
+			</dl>
+
+
+
 			<div id="preLoopDiv">
 				<dl>
 					<dt><%= LanguageUtil.get(pageContext, "Pre-Loop") %>:</dt>
@@ -191,93 +207,7 @@
 				</dl>
 			</div>
 
-			<div id="multiCodeButtonDiv">
-				<dl>
-					<dt>
-						<span class="required"></span>
-						<%= LanguageUtil.get(pageContext, "Code-Per-Content-Type") %>:
-					</dt>
-					<dd>
-						<div id="structureSelecttDiv" >
-							<select dojoType="dijit.form.FilteringSelect" name="structureInode" id="structureSelect" value="<%= form.getStructureInode() %>">
-
-		<%					List<ContainerStructure> containerStructures = form.getContainerStructures();
-							for (Structure structure: structures) {
-								boolean exists = false;
-
-								for(ContainerStructure cs: containerStructures) {
-									if(cs.getStructureId().equals(structure.getInode())) {
-										exists = true;
-										break;
-									}
-								}
-
-// 								if(!exists) {
-		%>							<option value="<%= structure.getInode() %>"><%= structure.getName() %></option>
-		<%
-// 								}
-							}
-		%>
-							</select>
-							<button dojoType="dijit.form.Button"  onClick="addCodeTab()" iconClass="plusIcon" type="button">
-						        	<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "add-content-type")) %>
-						    </button>
-					    </div>
-					</dd>
-					<dd>
-						<div style="width:650px;height:400px">
-							<div dojoType="dijit.layout.TabContainer" id="tabContainer" style="width:670px;height:400px;z-index:100; " dolayout="false">
-							<style>
-							.dijitTabCloseButton {
-								width: 15px;
-								height: 15px;
-							}
-							.dijitTabCloseText {
-								display:block;
-							}
-							.dijitDisplayNone {
-								display:block !important;
-							}
-							</style>
-							<%
-							for(ContainerStructure cs: containerStructures) {
-								Structure st = StructureCache.getStructureByInode(cs.getStructureId());
-								String code = UtilMethods.escapeHTMLSpecialChars(cs.getCode());
-							%>
-								<div dojoType="dijit.layout.ContentPane" title="<%=st.getName()%>" selected="true" style="padding:0" id="tab_<%=st.getInode()%>" data-dojo-props="closable:true">
-									<textarea style="width:99%; height:300px" onkeydown="return catchTab(this,event)" name="codeMaskMulti<%=st.getInode()%>" id="codeMaskMulti<%=st.getInode()%>"><%=UtilMethods.isSet(cs.getCode())?UtilMethods.escapeHTMLSpecialChars(cs.getCode()):"" %></textarea>
-								</div>
-								<script>
-									addStructureToList('<%=st.getInode()%>');
-
-									var tab = dijit.byId('tab_<%=st.getInode()%>');
-									require(["dojo/on"], function(on){
-										  on(tab, "close", function(e){
-										    removeStructure(structureInode);
-										  });
-									});
-								</script>
-								<%
-							}
-							%>
-							</div>
-						</div>
-						<input type="checkbox" dojoType="dijit.form.CheckBox" name="toggleEditorCodeMultiple" id="toggleEditorCodeMultiple"  onClick="codeMirrorToggler(codeEditor, 'codeMaskMulti','<%=codeWidth%>', '<%=codeHeight%>' );"  checked="checked"  />
-	        	        <label for="toggleEditorCodeMultiple"><%= LanguageUtil.get(pageContext, "Toggle-Editor") %></label>
-
-					</dd>
-					<dd class="buttonCaption">
-						<button dojoType="dijit.form.Button"  onClick="addVariable()" iconClass="plusIcon" type="button">
-				        	<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "add-variable")) %>
-				    	</button>
-
-					</dd>
-				</dl>
-
-				<!-- will host all tabs and their content panes -->
-			</div>
-
-			<div id="codeButtonDiv" >
+			<div id="codeButtonDiv">
 				<dl>
 					<dt>
 						<span class="required"></span>
@@ -291,6 +221,11 @@
 						</div>
 						<input type="checkbox" dojoType="dijit.form.CheckBox" name="toggleEditorCode" id="toggleEditorCode"  onClick="codeEditor=codeMirrorToggler(codeEditor, 'codeMask','<%=codeWidth%>', '<%=codeHeight%>' );"  checked="checked"  />
 	        	        <label for="toggleEditorCode"><%= LanguageUtil.get(pageContext, "Toggle-Editor") %></label>
+					</dd>
+					<dd class="buttonCaption">
+						<button dojoType="dijit.form.Button"  onClick="addVariable()" iconClass="plusIcon" type="button">
+				        	<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "add-variable")) %>
+				    	</button>
 					</dd>
 				</dl>
 			</div>
@@ -316,7 +251,7 @@
 					<dd><textarea dojoType="dijit.form.Textarea" style="width:450px; min-height:150px" maxlength="255" name="notes" id="notes"><%= UtilMethods.isSet(form.getNotes()) ? form.getNotes() : "" %></textarea></dd>
 				</dl>
 				<script type="text/javascript">
-					dojo.connect(dijit.byId('notes'), 'onkeydown', function(e) {if(dijit.byId('notes').focused) return catchTab(document.getElementById('notes'), e) });
+					dojo.connect(dijit.byId('notes'), 'onkeydown', function(e) { return catchTab(document.getElementById('notes'), e) });
 				</script>
 			</div>
 
@@ -346,6 +281,7 @@
 			</div>
 		<% } %>
 	<!-- END Versions TAB -->
+
 
 </div>
 <!-- END TABS -->

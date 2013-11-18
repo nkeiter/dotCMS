@@ -31,6 +31,8 @@ import org.elasticsearch.search.SearchHits;
 
 import com.dotcms.content.business.DotMappingException;
 import com.dotcms.enterprise.cmis.QueryResult;
+import com.dotcms.publisher.business.DotPublisherException;
+import com.dotcms.publisher.business.PublisherAPI;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.beans.Identifier;
 import com.dotmarketing.beans.MultiTree;
@@ -113,6 +115,7 @@ import com.dotmarketing.util.RegEX;
 import com.dotmarketing.util.RegExMatch;
 import com.dotmarketing.util.UUIDGenerator;
 import com.dotmarketing.util.UtilMethods;
+import com.dotmarketing.util.WebKeys;
 import com.google.gson.Gson;
 import com.liferay.portal.NoSuchUserException;
 import com.liferay.portal.model.User;
@@ -236,7 +239,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
         }catch (DotSecurityException se) {
 			throw se;
     	}catch (Exception e) {
-            throw new DotContentletStateException("Can't find contentlet: " + identifier + " lang:" + languageId + " live:" + live );
+            throw new DotContentletStateException("Can't find contentlet: " + identifier + " lang:" + languageId + " live:" + live,e);
         }
 
     }
@@ -385,12 +388,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
                     //Identifier id = (Identifier) InodeFactory.getInode(value, Identifier.class);
                     Identifier id = APILocator.getIdentifierAPI().find(value);
                     if (InodeUtils.isSet(id.getInode()) && id.getAssetType().equals("contentlet")) {
-                    	Contentlet fileAssetCont = null;
-                    	try {
-                    		fileAssetCont = findContentletByIdentifier(id.getId(), true, defaultLang.getId(), APILocator.getUserAPI().getSystemUser(), false);
-                        } catch(DotContentletStateException se) {
-                        	fileAssetCont = findContentletByIdentifier(id.getId(), false, defaultLang.getId(), APILocator.getUserAPI().getSystemUser(), false);
-                        }
+                    	Contentlet fileAssetCont = findBinaryAssociatedContent(id,contentlet.getLanguageId());
                         publish(fileAssetCont, APILocator.getUserAPI().getSystemUser(), false);
                     }else if(InodeUtils.isSet(id.getInode())){
                         File file  = (File) APILocator.getVersionableAPI().findWorkingVersion(id, APILocator.getUserAPI().getSystemUser(), false);
@@ -1140,6 +1138,14 @@ public class ESContentletAPIImpl implements ContentletAPI {
 
         // jira.dotmarketing.net/browse/DOTCMS-1073
         deleteBinaryFiles(contentletsVersion,null);
+
+        for (Contentlet contentlet : contentlets) {
+        	try {
+				PublisherAPI.getInstance().deleteElementFromPublishQueueTable(contentlet.getIdentifier());
+			} catch (DotPublisherException e) {
+				Logger.error(getClass(), "Error deleting Contentlet from Publishing Queue. Identifier:  " + contentlet.getIdentifier());
+			}
+		}
 
     }
 
@@ -2049,11 +2055,17 @@ public class ESContentletAPIImpl implements ContentletAPI {
 				    throw ve;
 				}
 
-				canLock(contentlet, user);
+				if(contentlet.getMap().get("_dont_validate_me") == null) {
+				    canLock(contentlet, user);
+				}
 				contentlet.setModUser(user.getUserId());
 				// start up workflow
 				WorkflowAPI wapi  = APILocator.getWorkflowAPI();
-				WorkflowProcessor workflow = wapi.fireWorkflowPreCheckin(contentlet,user);
+				WorkflowProcessor workflow=null;
+
+				if(contentlet.getMap().get("__disable_workflow__")==null) {
+				    workflow = wapi.fireWorkflowPreCheckin(contentlet,user);
+				}
 
 				workingContentlet = contentlet;
 				if(createNewVersion)
@@ -2104,6 +2116,8 @@ public class ESContentletAPIImpl implements ContentletAPI {
 				String contentPushExpireDate = contentlet.getStringProperty("wfExpireDate");
 				String contentPushExpireTime = contentlet.getStringProperty("wfExpireTime");
 				String contentPushNeverExpire = contentlet.getStringProperty("wfNeverExpire");
+				String contentWhereToSend = contentlet.getStringProperty("whereToSend");
+				String forcePush = contentlet.getStringProperty("forcePush");
 
 				if(saveWithExistingID)
 				    contentlet = conFac.save(contentlet, existingInode);
@@ -2295,7 +2309,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
 			                		oldFile = new java.io.File(oldDir.getAbsolutePath()  + java.io.File.separator + velocityVarNm + java.io.File.separator +  oldFileName);
 
 			                		// do we have an inline edited file, if so use that
-					                java.io.File editedFile = new java.io.File(oldDir.getAbsolutePath()  + java.io.File.separator + velocityVarNm + java.io.File.separator + "_temp_" + oldFileName);
+					                java.io.File editedFile = new java.io.File(oldDir.getAbsolutePath()  + java.io.File.separator + velocityVarNm + java.io.File.separator + WebKeys.TEMP_FILE_PREFIX + oldFileName);
 				                    if(editedFile.exists()){
 				                    	incomingFile = editedFile;
 				                    }
@@ -2308,7 +2322,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
 			                	if(oldFile==null || !oldFile.equals(incomingFile)){
 				                	//FileUtil.deltree(binaryFieldFolder);
 
-			                		FileUtil.copyFile(incomingFile, newFile);
+			                		FileUtil.move(incomingFile, newFile);
 
 			                		// delete old content metadata if exists
 			                		if(metadata!=null && metadata.exists())
@@ -2501,10 +2515,14 @@ public class ESContentletAPIImpl implements ContentletAPI {
 				contentlet.setStringProperty("wfExpireDate", contentPushExpireDate);
 				contentlet.setStringProperty("wfExpireTime", contentPushExpireTime);
 				contentlet.setStringProperty("wfNeverExpire", contentPushNeverExpire);
+				contentlet.setStringProperty("whereToSend", contentWhereToSend);
+				contentlet.setStringProperty("forcePush", forcePush);
 
 				//wapi.
-				workflow.setContentlet(contentlet);
-				wapi.fireWorkflowPostCheckin(workflow);
+				if(workflow!=null) {
+    				workflow.setContentlet(contentlet);
+    				wapi.fireWorkflowPostCheckin(workflow);
+				}
 
 				// DOTCMS-7290
 				DotCacheAdministrator cache = CacheLocator.getCacheAdministrator();
@@ -3000,6 +3018,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
             // setBinary
             }else if(field.getFieldContentlet().startsWith("binary")){
                 try{
+                	System.out.println(value.getClass());
                     contentlet.setBinary(field.getVelocityVarName(), (java.io.File) value);
                 }catch (Exception e) {
                     throw new DotContentletStateException("Unable to set binary file Object");
@@ -3163,7 +3182,7 @@ public class ESContentletAPIImpl implements ContentletAPI {
                         hasError = true;
                         continue;
                     }
-                } else if(!UtilMethods.isSet(o) && (st.getStructureType() != (Structure.STRUCTURE_TYPE_FORM))) {
+                } else if(!UtilMethods.isSet(o)) {
                     cve.addRequiredField(field);
                     hasError = true;
                     continue;
@@ -3627,9 +3646,11 @@ public class ESContentletAPIImpl implements ContentletAPI {
                 + velocityVariableName);
                 if(binaryFilefolder.exists()){
                 java.io.File[] files = binaryFilefolder.listFiles(new BinaryFileFilter());
+
                 if(files.length > 0){
-                binaryFile = files[0];
+                	binaryFile = files[0];
                 }
+
             }
         }catch(Exception e){
             Logger.error(this,"Error occured while retrieving binary file name : getBinaryFileName(). ContentletInode : "+contentletInode+"  velocityVaribleName : "+velocityVariableName );
@@ -3680,107 +3701,135 @@ public class ESContentletAPIImpl implements ContentletAPI {
         return QueryUtil.DBSearch(query, dbColToObjectAttribute, "structure_inode = '" + fields.get(0).getStructureInode() + "'", user, true,respectFrontendRoles);
     }
 
-    private Contentlet copyContentlet(Contentlet contentlet, Host host, Folder folder, User user,boolean appendCopyToFileName, boolean respectFrontendRoles) throws DotDataException, DotSecurityException, DotContentletStateException {
+    private Contentlet copyContentlet(Contentlet contentletToCopy, Host host, Folder folder, User user,boolean appendCopyToFileName, boolean respectFrontendRoles) throws DotDataException, DotSecurityException, DotContentletStateException {
 
-    	boolean isContentletLive = false;
+    	Contentlet resultContentlet = new Contentlet();
+    	String newIdentifier = "";
+    	List<Contentlet> versionsToCopy = new ArrayList<Contentlet>();
+    	List<Contentlet> versionsToMarkWorking = new ArrayList<Contentlet>();
+    	//GIT-4362 copying all versions of a content
+    	versionsToCopy.addAll(findAllVersions(APILocator.getIdentifierAPI().find(contentletToCopy.getIdentifier()), user, respectFrontendRoles));
+    	
+    	for(Contentlet contentlet : versionsToCopy){
+        	
+        	boolean isContentletLive = false;
+        	boolean isContentletWorking = false;
 
-        if (user == null) {
-            throw new DotSecurityException("A user must be specified.");
-        }
+            if (user == null) {
+                throw new DotSecurityException("A user must be specified.");
+            }
 
-        if (!perAPI.doesUserHavePermission(contentlet, PermissionAPI.PERMISSION_READ, user, respectFrontendRoles)) {
-            throw new DotSecurityException("You don't have permission to read the source file.");
-        }
+            if (!perAPI.doesUserHavePermission(contentlet, PermissionAPI.PERMISSION_READ, user, respectFrontendRoles)) {
+                throw new DotSecurityException("You don't have permission to read the source file.");
+            }
 
-        // gets the new information for the template from the request object
-        Contentlet newContentlet = new Contentlet();
-        newContentlet.setStructureInode(contentlet.getStructureInode());
-        copyProperties(newContentlet, contentlet.getMap(),true);
-        //newContentlet.setLocked(false);
-        //newContentlet.setLive(contentlet.isLive());
+            // gets the new information for the template from the request object
+            Contentlet newContentlet = new Contentlet();
+            newContentlet.setStructureInode(contentlet.getStructureInode());
+            copyProperties(newContentlet, contentlet.getMap(),true);
+            //newContentlet.setLocked(false);
+            //newContentlet.setLive(contentlet.isLive());
 
-        if(contentlet.isLive())
-        	isContentletLive = true;
+            if(contentlet.isLive())
+            	isContentletLive = true;
+            if(contentlet.isWorking())
+            	isContentletWorking = true;
 
-        newContentlet.setInode("");
-        newContentlet.setIdentifier("");
-        newContentlet.setHost(host != null?host.getIdentifier(): (folder!=null? folder.getHostId() : contentlet.getHost()));
-        newContentlet.setFolder(folder != null?folder.getInode(): null);
-        newContentlet.setLowIndexPriority(contentlet.isLowIndexPriority());
-        if(contentlet.getStructure().getStructureType()==Structure.STRUCTURE_TYPE_FILEASSET){
-        	if(appendCopyToFileName){
-        		String fldNameNoExt=UtilMethods.getFileName(newContentlet.getStringProperty(FileAssetAPI.FILE_NAME_FIELD));
-                String fldfileExt=UtilMethods.getFileExtension(newContentlet.getStringProperty(FileAssetAPI.FILE_NAME_FIELD));
-        		newContentlet.setStringProperty(FileAssetAPI.FILE_NAME_FIELD, fldNameNoExt + "_(COPY)." + fldfileExt);
-        	}
-        	else
-        		newContentlet.setStringProperty(FileAssetAPI.FILE_NAME_FIELD, newContentlet.getStringProperty(FileAssetAPI.FILE_NAME_FIELD));
-        }
+            newContentlet.setInode("");
+            newContentlet.setIdentifier("");
+            if(UtilMethods.isSet(newIdentifier))
+            	newContentlet.setIdentifier(newIdentifier);
+            newContentlet.setHost(host != null?host.getIdentifier(): (folder!=null? folder.getHostId() : contentlet.getHost()));
+            newContentlet.setFolder(folder != null?folder.getInode(): null);
+            newContentlet.setLowIndexPriority(contentlet.isLowIndexPriority());
+            if(contentlet.getStructure().getStructureType()==Structure.STRUCTURE_TYPE_FILEASSET){
+            	if(appendCopyToFileName){
+            		String fldNameNoExt=UtilMethods.getFileName(newContentlet.getStringProperty(FileAssetAPI.FILE_NAME_FIELD));
+                    String fldfileExt=UtilMethods.getFileExtension(newContentlet.getStringProperty(FileAssetAPI.FILE_NAME_FIELD));
+            		newContentlet.setStringProperty(FileAssetAPI.FILE_NAME_FIELD, fldNameNoExt + "_(COPY)." + fldfileExt);
+            	}
+            	else
+            		newContentlet.setStringProperty(FileAssetAPI.FILE_NAME_FIELD, newContentlet.getStringProperty(FileAssetAPI.FILE_NAME_FIELD));
+            }
 
-        List <Field> fields = FieldsCache.getFieldsByStructureInode(contentlet.getStructureInode());
-        java.io.File srcFile;
-        java.io.File destFile = new java.io.File(APILocator.getFileAPI().getRealAssetPathTmpBinary() + java.io.File.separator + user.getUserId());
-        if (!destFile.exists())
-            destFile.mkdirs();
+            List <Field> fields = FieldsCache.getFieldsByStructureInode(contentlet.getStructureInode());
+            java.io.File srcFile;
+            java.io.File destFile = new java.io.File(APILocator.getFileAPI().getRealAssetPathTmpBinary() + java.io.File.separator + user.getUserId());
+            if (!destFile.exists())
+                destFile.mkdirs();
 
-        String fieldValue;
-        for (Field tempField: fields) {
-            if (tempField.getFieldType().equals(Field.FieldType.BINARY.toString())) {
-                fieldValue = "";
-                try {
-                    srcFile = getBinaryFile(contentlet.getInode(), tempField.getVelocityVarName(), user);
-                    if(srcFile != null) {
-                        if(contentlet.getStructure().getStructureType()==Structure.STRUCTURE_TYPE_FILEASSET){
-                            final String nameNoExt=UtilMethods.getFileName(srcFile.getName());
-                            final String fileExt=UtilMethods.getFileExtension(srcFile.getName());
-                        	if(appendCopyToFileName)
-                        		fieldValue = nameNoExt + "_copy." + fileExt;
-                        	else
-                        		fieldValue = nameNoExt + "." + fileExt;
-                        }else{
-                            fieldValue=srcFile.getName();
+            String fieldValue;
+            for (Field tempField: fields) {
+                if (tempField.getFieldType().equals(Field.FieldType.BINARY.toString())) {
+                    fieldValue = "";
+                    try {
+                        srcFile = getBinaryFile(contentlet.getInode(), tempField.getVelocityVarName(), user);
+                        if(srcFile != null) {
+                            if(contentlet.getStructure().getStructureType()==Structure.STRUCTURE_TYPE_FILEASSET){
+                                final String nameNoExt=UtilMethods.getFileName(srcFile.getName());
+                                final String fileExt=UtilMethods.getFileExtension(srcFile.getName());
+                            	if(appendCopyToFileName)
+                            		fieldValue = nameNoExt + "_copy." + fileExt;
+                            	else
+                            		fieldValue = nameNoExt + "." + fileExt;
+                            }else{
+                                fieldValue=srcFile.getName();
+                            }
+                            destFile = new java.io.File(APILocator.getFileAPI().getRealAssetPathTmpBinary() + java.io.File.separator + user.getUserId() + java.io.File.separator + fieldValue);
+                            if (!destFile.exists())
+                                destFile.createNewFile();
+
+                            FileUtils.copyFile(srcFile, destFile);
+                            newContentlet.setBinary(tempField.getVelocityVarName(), destFile);
                         }
-                        destFile = new java.io.File(APILocator.getFileAPI().getRealAssetPathTmpBinary() + java.io.File.separator + user.getUserId() + java.io.File.separator + fieldValue);
-                        if (!destFile.exists())
-                            destFile.createNewFile();
-
-                        FileUtils.copyFile(srcFile, destFile);
-                        newContentlet.setBinary(tempField.getVelocityVarName(), destFile);
+                    } catch (Exception e) {
+                        throw new DotDataException("Error copying binary file: '" + fieldValue + "'");
                     }
-                } catch (Exception e) {
-                    throw new DotDataException("Error copying binary file: '" + fieldValue + "'");
                 }
-            }
 
-            if (tempField.getFieldType().equals(Field.FieldType.HOST_OR_FOLDER.toString())) {
-                if (folder != null || host != null){
-                    newContentlet.setStringProperty(tempField.getVelocityVarName(), folder != null?folder.getInode():host.getIdentifier());
-                }else{
-                    if(contentlet.getFolder().equals(FolderAPI.SYSTEM_FOLDER)){
-                        newContentlet.setStringProperty(tempField.getVelocityVarName(), contentlet.getFolder());
+                if (tempField.getFieldType().equals(Field.FieldType.HOST_OR_FOLDER.toString())) {
+                    if (folder != null || host != null){
+                        newContentlet.setStringProperty(tempField.getVelocityVarName(), folder != null?folder.getInode():host.getIdentifier());
                     }else{
-                        newContentlet.setStringProperty(tempField.getVelocityVarName(), contentlet.getHost());
+                        if(contentlet.getFolder().equals(FolderAPI.SYSTEM_FOLDER)){
+                            newContentlet.setStringProperty(tempField.getVelocityVarName(), contentlet.getFolder());
+                        }else{
+                            newContentlet.setStringProperty(tempField.getVelocityVarName(), contentlet.getHost());
+                        }
                     }
                 }
             }
-        }
 
-        List<Category> parentCats = catAPI.getParents(contentlet, false, user, respectFrontendRoles);
-        ContentletRelationships cr = getAllRelationships(contentlet);
-        List<ContentletRelationshipRecords> rr = cr.getRelationshipsRecords();
-        Map<Relationship, List<Contentlet>> rels = new HashMap<Relationship, List<Contentlet>>();
-        for (ContentletRelationshipRecords crr : rr) {
-            rels.put(crr.getRelationship(), crr.getRecords());
-        }
+            List<Category> parentCats = catAPI.getParents(contentlet, false, user, respectFrontendRoles);
+            ContentletRelationships cr = getAllRelationships(contentlet);
+            List<ContentletRelationshipRecords> rr = cr.getRelationshipsRecords();
+            Map<Relationship, List<Contentlet>> rels = new HashMap<Relationship, List<Contentlet>>();
+            for (ContentletRelationshipRecords crr : rr) {
+                rels.put(crr.getRelationship(), crr.getRecords());
+            }
 
-        newContentlet = checkin(newContentlet, rels, parentCats, perAPI.getPermissions(contentlet), user, respectFrontendRoles);
+            newContentlet = checkin(newContentlet, rels, parentCats, perAPI.getPermissions(contentlet), user, respectFrontendRoles);
+            if(!UtilMethods.isSet(newIdentifier))
+            	newIdentifier = newContentlet.getIdentifier();
 
-        perAPI.copyPermissions(contentlet, newContentlet);
+            perAPI.copyPermissions(contentlet, newContentlet);
 
-        if(isContentletLive)
-        	APILocator.getVersionableAPI().setLive(newContentlet);
+            if(isContentletLive)
+            	APILocator.getVersionableAPI().setLive(newContentlet);
+ 
+            if(isContentletWorking)
+            	versionsToMarkWorking.add(newContentlet);
+            
 
-        return newContentlet;
+            if(contentlet.getInode().equals(contentletToCopy.getInode()))
+            	resultContentlet = newContentlet;
+    	}
+    	
+    	for(Contentlet con : versionsToMarkWorking){
+    		APILocator.getVersionableAPI().setWorking(con);
+    	}
+    	
+    	return resultContentlet;
     }
 
     public Contentlet copyContentlet(Contentlet contentlet, User user, boolean respectFrontendRoles) throws DotDataException, DotSecurityException, DotContentletStateException {
@@ -4185,5 +4234,37 @@ public class ESContentletAPIImpl implements ContentletAPI {
 			result = conFac.getMostViewedContent(structureInode, startDate, endDate , user);
 		} catch (Exception e) {}
 		return result;
+	}
+
+	/**
+	 * This method is called when I'm publishing a contentlet and one of its fields is an IMAGE or a FILE.
+	 *
+	 * Unlike the current version, before find the asset with the default language I try to do this by using the languageId of the
+	 * current contentlet.
+	 *
+	 * In this way I can upload an asset into a language different from the default one, publish it and create another contentlet,
+	 * into the same language, and link them.
+	 *
+	 * @author Graziano Aliberti - Engineering Ingegneria Informatica S.p.a
+	 *
+	 * Jun 20, 2013 - 2:32:05 PM
+	 */
+	private Contentlet findBinaryAssociatedContent(Identifier id, long languageId) throws DotContentletStateException, DotSecurityException, DotDataException{
+		Contentlet fileAssetCont = null;
+    	try {
+    		fileAssetCont = findContentletByIdentifier(id.getId(), true, languageId, APILocator.getUserAPI().getSystemUser(), false);
+        } catch(DotContentletStateException se) {
+        	try{
+        		fileAssetCont = findContentletByIdentifier(id.getId(), false, languageId, APILocator.getUserAPI().getSystemUser(), false);
+        	}catch(DotContentletStateException se1) {
+        		/**
+        		 * Finally, if I didn't found the contentlet I do the "findContentletByIdentifier" with the default language,
+        		 * like the current class version.
+        		 */
+        		fileAssetCont = findContentletByIdentifier(id.getId(), true, APILocator.getLanguageAPI().getDefaultLanguage().getId(), APILocator.getUserAPI().getSystemUser(), false);
+        	}
+        }
+    	return fileAssetCont;
+
 	}
 }

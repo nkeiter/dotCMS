@@ -314,19 +314,19 @@ function doDeleteContentlets(){
 }
 
 function doDeletePushedAssets(){
-	  if(confirm("<%= LanguageUtil.get(pageContext,"Do-you-want-to-delete-assets") %>")){
-		 	$("deletePushedAssetsMessage").innerHTML= '<font face="Arial" size="2" color="#ff0000><b><%= LanguageUtil.get(pageContext,"Process-in-progress-deleting-pushed-assets") %></b></font>';
-		 	$("deleteContentletButton").disabled = true;
-			CMSMaintenanceAjax.deletePushedAssets(doDeletePushedAssetsCallback);
-		}
+    if(confirm("<%= LanguageUtil.get(pageContext,"Do-you-want-to-delete-assets") %>")){
+       $("deletePushedAssetsMessage").innerHTML= '<font face="Arial" size="2" color="#ff0000><b><%= LanguageUtil.get(pageContext,"Process-in-progress-		deleting-pushed-assets") %></b></font>';
+       $("deleteContentletButton").disabled = true;
+      CMSMaintenanceAjax.deletePushedAssets(doDeletePushedAssetsCallback);
+    }
 }
 
 function doDeletePushedAssetsCallback(result) {
-	if(result!=null && result=="success") {
-		document.getElementById("deletePushedAssetsMessage").innerHTML='<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext,"pushed-assets-were-succesfully-deleted")) %>';
-	} else {
-		document.getElementById("deletePushedAssetsMessage").innerHTML='<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext,"push-assets-could-not-be-deleted")) %>';
-	}
+  if(result!=null && result=="success") {
+    document.getElementById("deletePushedAssetsMessage").innerHTML='<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext,"pushed-assets-were-	succesfully-deleted")) %>';
+  } else {
+    document.getElementById("deletePushedAssetsMessage").innerHTML='<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext,"push-assets-could-	not-be-deleted")) %>';
+  }
 }
 
 function doDeleteContentletsCallback(contentlets){
@@ -490,8 +490,7 @@ function refreshCache(){
 	<%}else{%>
 		x.attr( "href","/html/portlet/ext/cmsmaintenance/cachestats.jsp?r=" + y  );
 	<%}%>
-	x.style( "height","600px"  );
-	console.log(x);
+	x.style =  "height:600px";
 
 }
 
@@ -1622,26 +1621,23 @@ dd.leftdl {
 
             </table>
 
-            <div style="height:20px">&nbsp;</div>
-
             <table class="listingTable">
-                <tr>
-                    <th><%= LanguageUtil.get(pageContext,"Delete-Pushed-Assets") %></th>
-                    <th style="text-align:center;white-space:nowrap;" width="350"><%= LanguageUtil.get(pageContext,"Action") %></th>
-                </tr>
-                <tr>
-                    <td>
-                        <p><%= LanguageUtil.get(pageContext,"This-utility-will-remove-all-pushed-assets") %></p>
-                         <div align="center"  id="deletePushedAssetsMessage"></div>
-                    </td>
-                    <td align="center">
-                      <button dojoType="dijit.form.Button" onClick="doDeletePushedAssets();"  id="deletePushAssetsButton" iconClass="deleteIcon">
-                         <%= LanguageUtil.get(pageContext,"Execute") %>
-                      </button>
-                    </td>
-                </tr>
-
-            </table>
+	              <tr>
+	                  <th><%= LanguageUtil.get(pageContext,"Delete-Pushed-Assets") %></th>
+	                  <th style="text-align:center;white-space:nowrap;" width="350"><%= LanguageUtil.get(pageContext,"Action") %></th>
+	              </tr>
+	              <tr>
+	                  <td>
+	                      <p><%= LanguageUtil.get(pageContext,"This-utility-will-remove-all-pushed-assets") %></p>
+	                       <div align="center"  id="deletePushedAssetsMessage"></div>
+	                  </td>
+	                  <td align="center">
+	                    <button dojoType="dijit.form.Button" onClick="doDeletePushedAssets();"  id="deletePushAssetsButton" iconClass="deleteIcon">
+	                       <%= LanguageUtil.get(pageContext,"Execute") %>
+	                    </button>
+	                  </td>
+	              </tr>
+          </table>
 
             <div style="height:20px">&nbsp;</div>
             <%

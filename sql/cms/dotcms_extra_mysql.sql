@@ -326,7 +326,7 @@ create index idx_template3 on template (title);
 CREATE INDEX idx_contentlet_4 ON contentlet (structure_inode);
 
 ALTER TABLE Folder add constraint folder_identifier_fk foreign key (identifier) references identifier(id);
---ALTER TABLE containers add constraint structure_fk foreign key (structure_inode) references structure(inode);
+ALTER TABLE containers add constraint structure_fk foreign key (structure_inode) references structure(inode);
 ALTER TABLE htmlpage add constraint template_id_fk foreign key (template_id) references identifier(id);
 
 DROP TRIGGER IF EXISTS check_templateId_when_insert;
@@ -494,7 +494,8 @@ create table workflow_scheme(
     archived boolean default false,
     mandatory boolean default false,
     default_scheme boolean default false,
-    entry_action_id varchar(36)
+    entry_action_id varchar(36),
+    mod_date datetime
 );
 
 create table workflow_step(
@@ -637,10 +638,11 @@ CREATE TABLE IF NOT EXISTS publishing_end_point (
 );
 
 create table publishing_environment(
-	id varchar(36) NOT NULL  primary key,
-	name varchar(255) NOT NULL unique,
-	push_to_all bool NOT NULL
+  	id varchar(36) NOT NULL  primary key,
+  	name varchar(255) NOT NULL unique,
+  	push_to_all bool NOT NULL
 );
+
 
 create table sitesearch_audit (
     job_id varchar(36),
@@ -661,6 +663,7 @@ create table sitesearch_audit (
     primary key(job_id,fire_date)
 );
 
+
 drop table publishing_queue;
 
 CREATE TABLE publishing_queue (
@@ -675,11 +678,11 @@ CREATE TABLE publishing_queue (
 );
 
 create table publishing_bundle(
-	id varchar(36) NOT NULL  primary key,
-	name varchar(255) NOT NULL unique,
-	publish_date DATETIME,
-	expire_date DATETIME,
-	owner varchar(100)
+	  id varchar(36) NOT NULL  primary key,
+	  name varchar(255) NOT NULL,
+	  publish_date DATETIME,
+	  expire_date DATETIME,
+	  owner varchar(100)
 );
 
 create table publishing_bundle_environment(id varchar(36) NOT NULL primary key,bundle_id varchar(36) NOT NULL, environment_id varchar(36) NOT NULL);
@@ -688,14 +691,17 @@ alter table publishing_bundle_environment add constraint FK_bundle_id foreign ke
 alter table publishing_bundle_environment add constraint FK_environment_id foreign key (environment_id) references publishing_environment(id);
 
 create table publishing_pushed_assets(
-	bundle_id varchar(36) NOT NULL,
-	asset_id varchar(36) NOT NULL,
-	asset_type varchar(255) NOT NULL,
-	push_date DATETIME,
-	environment_id varchar(36) NOT NULL
+  bundle_id varchar(36) NOT NULL,
+  asset_id varchar(36) NOT NULL,
+  asset_type varchar(255) NOT NULL,
+  push_date DATETIME,
+  environment_id varchar(36) NOT NULL
 );
 
 CREATE INDEX idx_pushed_assets_1 ON publishing_pushed_assets (bundle_id);
 CREATE INDEX idx_pushed_assets_2 ON publishing_pushed_assets (environment_id);
+
+CREATE INDEX idx_pub_qa_1 ON publishing_queue_audit (status);
+
 
 alter table publishing_bundle add force_push varchar(1) ;

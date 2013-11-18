@@ -64,9 +64,11 @@ catch(DotSecurityException dse) {
 }
 
 if(!hasPermissions) {
-    %> <%=LanguageUtil.get(pageContext, "you-do-not-have-the-required-permissions") %> <%
-}
-else {
+    %>
+<div style="padding:20px;text-align: center">
+<%=LanguageUtil.get(pageContext, "you-do-not-have-the-required-permissions") %> 
+</div>
+<%}else {
     
 
 try{
@@ -237,6 +239,9 @@ dojo.ready(function(){
 					Field.FieldType.RELATIONSHIPS_TAB.toString().equals(field.getFieldType())
 				){continue;}
 				
+				if(field.getFieldName().equals(LanguageUtil.get(pageContext, "Title"))){
+						continue;	
+				}
 				
 				if(content ==null || !UtilMethods.isSet( content.get(field.getVelocityVarName()))){
 					continue;	

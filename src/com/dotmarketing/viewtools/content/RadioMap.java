@@ -21,11 +21,15 @@ public class RadioMap {
 	 * All the possible options
 	 */
 	private List<String> options = new ArrayList<String>();
+	public List<String> getValues() {
+		return values;
+	}
+
 	private List<String> values = new ArrayList<String>();
 	private Object selectValue;	
 	
 	public RadioMap(Field field, Contentlet content) {
-		String[] pairs = field.getValues().split("\r\n");
+		String[] pairs = (field.getValues()!=null?field.getValues():"").split("\r\n");
 		for (int j = 0; j < pairs.length; j++) {
 		    String pair = pairs[j];
 		    String[] tokens = pair.split("\\|");
@@ -61,4 +65,32 @@ public class RadioMap {
 	public Object getSelectValue() {
 		return selectValue;
 	}
+	
+	
+	
+	
+	
+	/**
+	 * This will return the label of the
+	 * selected value
+	 * @return
+	 */
+	public Object getSelectOption() {
+		if(selectValue !=null && values != null){
+			int i=0;
+			for(String x : values){
+				if(x.equals(selectValue)){
+					return options.get(i);
+				}
+				i++;
+			}
+		}
+		return null;
+	}
+	
+	
+	
+	
+	
+	
 }

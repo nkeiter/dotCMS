@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.dotcms.publisher.pusher.PushPublisherConfig.Operation;
-import com.dotmarketing.beans.ContainerStructure;
 import com.dotmarketing.beans.Identifier;
 import com.dotmarketing.beans.VersionInfo;
 import com.dotmarketing.portlets.containers.model.Container;
@@ -14,8 +13,6 @@ public class ContainerWrapper {
 	private Container container;
 	private VersionInfo cvi;
 	private Operation operation;
-	private List<ContainerStructure> csList;
-
 	
 	// ISSUE #80
 	private List<Map<String,Object>> multiTree;
@@ -54,7 +51,7 @@ public class ContainerWrapper {
 	public void setCvi(VersionInfo cvi) {
 		this.cvi = cvi;
 	}
-
+	
 	/**
 	 * @return the operation
 	 */
@@ -68,16 +65,6 @@ public class ContainerWrapper {
 	public void setOperation(Operation operation) {
 		this.operation = operation;
 	}
-
-
-	public List<ContainerStructure> getCsList() {
-		return csList;
-	}
-
-	public void setCsList(List<ContainerStructure> csList) {
-		this.csList = csList;
-	}
-
 
 	public List<Map<String,Object>> getMultiTree() {
 		return multiTree;

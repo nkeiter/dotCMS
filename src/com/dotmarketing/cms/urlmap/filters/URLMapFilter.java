@@ -99,7 +99,7 @@ public class URLMapFilter implements Filter {
 		// http://jira.dotmarketing.net/browse/DOTCMS-6079
 		if (uri.endsWith("/"))
 			uri = uri.substring(0, uri.length() - 1);
-		
+	    
 		String pointer = null;
 		
 		if(host!=null){

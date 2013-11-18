@@ -244,8 +244,17 @@ public class BrowserAjax {
     }
 
 	public Map<String, Object> getFolderContent (String folderId, int offset, int maxResults, String filter, List<String> mimeTypes,
-			List<String> extensions, boolean showArchived, boolean noFolders, boolean onlyFiles, String sortBy, boolean sortByDesc) throws DotHibernateException, DotSecurityException, DotDataException {
+			List<String> extensions, boolean showArchived, boolean noFolders, boolean onlyFiles, String sortBy, boolean sortByDesc, boolean excludeLinks) throws DotHibernateException, DotSecurityException, DotDataException {
 
+		WebContext ctx = WebContextFactory.get();
+		HttpServletRequest req = ctx.getHttpServletRequest();
+		User usr = getUser(req);
+
+		return browserAPI.getFolderContent(usr, folderId, offset, maxResults, filter, mimeTypes, extensions, showArchived, noFolders, onlyFiles, sortBy, sortByDesc, excludeLinks);
+	}
+
+	public Map<String, Object> getFolderContent (String folderId, int offset, int maxResults, String filter, List<String> mimeTypes,
+			List<String> extensions, boolean showArchived, boolean noFolders, boolean onlyFiles, String sortBy, boolean sortByDesc) throws DotHibernateException, DotSecurityException, DotDataException {
 
 		WebContext ctx = WebContextFactory.get();
 		HttpServletRequest req = ctx.getHttpServletRequest();
@@ -253,8 +262,9 @@ public class BrowserAjax {
 
 		return browserAPI.getFolderContent(usr, folderId, offset, maxResults, filter, mimeTypes, extensions, showArchived, noFolders, onlyFiles, sortBy, sortByDesc);
 	}
-	public void saveFileAction(String selectedItem,String wfActionAssign,String wfActionId,String wfActionComments, String wfConId, String wfPublishDate, 
-			String wfPublishTime, String wfExpireDate, String wfExpireTime, String wfNeverExpire, String whereToSend) throws  DotSecurityException, ServletException{
+
+	public void saveFileAction(String selectedItem,String wfActionAssign,String wfActionId,String wfActionComments, String wfConId, String wfPublishDate,
+			String wfPublishTime, String wfExpireDate, String wfExpireTime, String wfNeverExpire, String whereToSend, String forcePush) throws  DotSecurityException, ServletException{
 		WebContext ctx = WebContextFactory.get();
         User usr = getUser(ctx.getHttpServletRequest());
 		Contentlet c = null;
@@ -268,13 +278,14 @@ public class BrowserAjax {
 			c.setStringProperty("wfActionId", action.getId());
 			c.setStringProperty("wfActionComments", wfActionComments);
 			c.setStringProperty("wfActionAssign", wfActionAssign);
-			
+
 			c.setStringProperty("wfPublishDate", wfPublishDate);
 			c.setStringProperty("wfPublishTime", wfPublishTime);
 			c.setStringProperty("wfExpireDate", wfExpireDate);
 			c.setStringProperty("wfExpireTime", wfExpireTime);
 			c.setStringProperty("wfNeverExpire", wfNeverExpire);
 			c.setStringProperty("whereToSend", whereToSend);
+			c.setStringProperty("forcePush", forcePush);
 
 			wapi.fireWorkflowNoCheckin(c, usr);
 
@@ -397,6 +408,7 @@ public class BrowserAjax {
     	result.put("extension", "");
     	result.put("newName", newName);
     	result.put("inode", folder.getInode());
+    	result.put("assetType", "folder");
     	try {
 			if (folderAPI.renameFolder(folder, newName,usr,false)) {
 				result.put("result", 0);
@@ -518,7 +530,7 @@ public class BrowserAjax {
                     //A folder with the same name already exists on the destination
                     return false;
                 }
-                
+
                 refreshIndex(null, parentFolder, user, null, folder );
                 APILocator.getPermissionAPI().resetPermissionReferences(folder);
             }
@@ -546,17 +558,21 @@ public class BrowserAjax {
     	Identifier id  = APILocator.getIdentifierAPI().findFromInode(inode);
     	if(id!=null && id.getAssetType().equals("contentlet")){
     		Contentlet cont  = APILocator.getContentletAPI().find(inode, user, false);
-    		String lName = (String) cont.get(FileAssetAPI.FILE_NAME_FIELD);
-    		result.put("lastName", lName.substring(0, lName.lastIndexOf(".")));
+    		result.put("lastName", cont.get(FileAssetAPI.FILE_NAME_FIELD));
     		result.put("extension", UtilMethods.getFileExtension(cont.getStringProperty(FileAssetAPI.FILE_NAME_FIELD)));
     		result.put("newName", newName);
     		result.put("inode", inode);
     		if(!cont.isLocked()){
-    			if(APILocator.getFileAssetAPI().renameFile(cont, newName, user, false)){
-    				result.put("result", 0);
-    			}else{
+    			try{
+    				if(APILocator.getFileAssetAPI().renameFile(cont, newName, user, false)){
+        				result.put("result", 0);
+        			}else{
+        				result.put("result", 1);
+        				result.put("errorReason", "Another file with the same name already exists on this folder");
+        			}
+    			}catch(Exception e){
     				result.put("result", 1);
-    				result.put("errorReason", "Another file with the same name already exists on this folder");
+    				result.put("errorReason", e.getLocalizedMessage());
     			}
     		}else{
     			result.put("result", 1);
@@ -639,14 +655,14 @@ public class BrowserAjax {
             } else {
                 APILocator.getContentletAPI().copyContentlet( cont, host, user, false );
             }
-            
+
             // issues/1788
-            // issues/1967 
-    		
+            // issues/1967
+
     		Folder srcFolder = APILocator.getFolderAPI().find(cont.getFolder(),user,false);
     		refreshIndex(null, parent, user, host, srcFolder );
 
-            
+
             return "File-copied";
         }
 
@@ -659,7 +675,7 @@ public class BrowserAjax {
         // Checking permissions
         if ( !permissionAPI.doesUserHavePermission( file, PERMISSION_WRITE, user ) ) {
             return "File-failed-to-copy-check-you-have-the-required-permissions";
-        }        
+        }
         refreshIndex(file, parent, user, host, null );
 
         if ( parent != null ) {
@@ -713,7 +729,12 @@ public class BrowserAjax {
             //Getting the contentlet file
             Contentlet contentlet = APILocator.getContentletAPI().find( inode, user, false );
             Folder srcFolder = APILocator.getFolderAPI().find(contentlet.getFolder(),user,false);
-    		refreshIndex(null, parent, user, host, srcFolder );
+
+            if(contentlet.getFolder().equals("SYSTEM_FOLDER")) {
+            	refreshIndex(null, null, user, APILocator.getHostAPI().find(contentlet.getHost(), user, false), srcFolder );
+            } else {
+            	refreshIndex(null, parent, user, host, srcFolder );
+            }
 
             if ( parent != null ) {
                 return APILocator.getFileAssetAPI().moveFile( contentlet, parent, user, false );
@@ -728,7 +749,7 @@ public class BrowserAjax {
         if ( !permissionAPI.doesUserHavePermission( file, PERMISSION_WRITE, user ) ) {
             throw new DotRuntimeException( "The user doesn't have the required permissions." );
         }
-        
+
         refreshIndex(file, parent, user, host, null );
 
         if ( parent != null ) {
@@ -848,9 +869,9 @@ public class BrowserAjax {
         }
 
         if ( parent != null ) {
-            return HTMLPageFactory.moveHTMLPage( page, parent );
+            return HTMLPageFactory.moveHTMLPage( page, parent, user );
         } else {
-            return HTMLPageFactory.moveHTMLPage( page, host );
+            return HTMLPageFactory.moveHTMLPage( page, host, user );
         }
     }
 
@@ -1667,13 +1688,13 @@ public class BrowserAjax {
 		}
 		return foldersToReturn;
 	}
-	
+
 	public void refreshIndex(File file, Folder parent, User user, Host host, Folder folder ) throws Exception {
-		
+
 		Folder srcFolder = folder;
 		if(folder == null){
 			srcFolder = APILocator.getFolderAPI().find(file.getParent(),user,false);
-			
+
 		}
      	// issues/1603 - refresh index for src Folder
         if (srcFolder!=null){

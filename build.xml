@@ -407,7 +407,7 @@
 
 		<antcall target="clean" />
 
-		<antcall target="deploy-core" />
+		<antcall target="deploy-no-jsp" />
 
         <!--dotserver code (./dotserver)-->
         <copy todir="${distribution.dotserver.output}">
@@ -441,6 +441,16 @@
 		<antcall target="javadoc" />
 
 		<zip destfile="${distribution.output}/../dotcms_${dotcms.release.version}.zip" basedir="${distribution.output}" />
+		
+		<tar destfile="${distribution.output}/../dotcms_${dotcms.release.version}.tar.gz" compression="gzip" longfile="gnu">
+			<tarfileset dir="${distribution.output}">
+		        <include name="**/**"/>
+		    </tarfileset>
+		    <tarfileset dir="${distribution.output}/dotserver/bin" prefix="/dotserver/bin" filemode="755">
+		        <include name="**/*.sh"/>
+		    </tarfileset>
+		</tar>
+		
 		<delete dir="${distribution.output}" />
 	</target>
 
@@ -448,7 +458,7 @@
 
 			<antcall target="clean" />
 
-			<antcall target="deploy-core" />
+			<antcall target="deploy-no-jsp" />
 
 			<!--dotserver code (./dotserver)-->
 		 	<copy todir="${distribution.dotserver.output}">
@@ -492,11 +502,11 @@
                         <classpath refid="files-classpath" />
                         <doctitle>
                                 <![CDATA[
-                        <h1>dotCMS 2.5 API Specification</h1>
+                        <h1>dotCMS 2.5.1 API Specification</h1>
                         ]]>
                         </doctitle>
                         <bottom>
-                                <![CDATA[<i>Copyright &#169; 2012 dotCMS Inc. All Rights Reserved.</i>]]></bottom>
+                                <![CDATA[<i>Copyright &#169; 2013 dotCMS Inc. All Rights Reserved.</i>]]></bottom>
                 <tag name="todo" scope="all" description="To do:" />
         </javadoc>
 
@@ -518,21 +528,26 @@
 
 	<mkdir dir="${build.war}"/>
 
-	 <copy todir="${build.war}/${war.name}.war">
-		<fileset dir="dotCMS/">
+	<zip destfile="${build.war}/${war.name}.war">
+		<zipfileset dir="dotCMS/" >
+			<exclude name="**/.svn"/>
 			<exclude name="assets/"/>
 			<exclude name="WEB-INF/backup/"/>
 			<exclude name="WEB-INF/dotlucene/"/>
 			<exclude name="dot_secure/"/>
 			<exclude name="dotsecure/"/>
-		</fileset>
-	</copy>
-	
+		</zipfileset>
+	</zip>
+
 </target>
 
 
 
-<target name="war" depends="deploy-no-jsp,deploy-plugins" description="builds dotCMS as a war without the jsps precompiled">
+<target name="war-no-jsp" depends="deploy-no-jsp,deploy-plugins" description="builds dotCMS as a war without the jsps precompiled">
+	<antcall target="war-file"/>
+</target>
+
+<target name="war" depends="deploy-core,deploy-plugins" description="builds dotCMS as a war without the jsps precompiled">
 	<antcall target="war-file"/>
 </target>
 
@@ -609,7 +624,6 @@
 			<classpath>
 	          <fileset dir="tomcat">
 	              <include name="bin/bootstrap.jar"/>
-	          	  <include name="bin/tomcat-juli.jar"/>
 	          </fileset>
 	        </classpath>
 	    </java>
@@ -622,13 +636,11 @@
 		 	<classpath>
 	          <fileset dir="tomcat">
 	              <include name="bin/bootstrap.jar"/>
-	          	  <include name="bin/tomcat-juli.jar"/>
 	          </fileset>
 	        </classpath>
 	    </java>
 	</target>
 
-	<!-- Creates an empty db. Attributes are defined in the build.properties file -->
 	<target name="create-db" >
 		<if>
 			<equals arg1="${db.driver}" arg2="oracle.jdbc.OracleDriver"/>
@@ -664,6 +676,19 @@
 	                CREATE DATABASE ${db.name};
 					ALTER DATABASE ${db.name} SET READ_COMMITTED_SNAPSHOT ON;
 					ALTER DATABASE ${db.name} SET ALLOW_SNAPSHOT_ISOLATION ON;
+	            </sql>
+			</then>
+		</elseif>
+		<elseif>
+			<equals arg1="${db.driver}" arg2="com.mysql.jdbc.Driver"/>
+			<then>
+				<sql driver="${db.driver}"
+	                url="${db.base.url}"
+	                userid="${db.username}"
+	                password="${db.password}"
+	                autocommit="true"
+	                classpathref="files-classpath">
+	                CREATE DATABASE ${db.name} DEFAULT CHARACTER SET = utf8 DEFAULT COLLATE = utf8_general_ci;
 	            </sql>
 			</then>
 		</elseif>

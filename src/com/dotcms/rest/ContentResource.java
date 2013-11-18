@@ -29,6 +29,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.queryParser.ParseException;
@@ -61,6 +62,7 @@ import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.viewtools.content.util.ContentUtils;
 import com.liferay.portal.model.User;
+import com.sun.jersey.core.header.ContentDisposition;
 import com.sun.jersey.multipart.BodyPart;
 import com.sun.jersey.multipart.FormDataMultiPart;
 import com.thoughtworks.xstream.XStream;
@@ -73,8 +75,9 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 
 @Path("/content")
 public class ContentResource extends WebResource {
+    
     private static final String RELATIONSHIP_KEY = "__##relationships##__";
-
+    
     /**
      * performs a call to APILocator.getContentletAPI().searchIndex() with the 
      * specified parameters.
@@ -126,7 +129,7 @@ public class ContentResource extends WebResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String indexCount(@Context HttpServletRequest request, @PathParam("query") String query) throws DotDataException, DotSecurityException {
         InitDataObject initData = init(null, true, request, false);
-        return Long.toString(APILocator.getContentletAPI().indexCount(query, initData.getUser(), true));
+        return Long.toString( APILocator.getContentletAPI().indexCount( query, initData.getUser(), true ) );
     }
 
     @GET
@@ -232,7 +235,8 @@ public class ContentResource extends WebResource {
         sb.append("<contentlets>");
 
         for(Contentlet c : cons){
-            Map<String, Object> m = c.getMap();
+            Map<String, Object> m = new HashMap<String, Object>();
+            m.putAll(c.getMap());
             Structure s = c.getStructure();
 
             for(Field f : FieldsCache.getFieldsByStructureInode(s.getInode())){
@@ -360,28 +364,50 @@ public class ContentResource extends WebResource {
         User user=init.getUser();
 
         Contentlet contentlet=new Contentlet();
+        
         for(BodyPart part : multipart.getBodyParts()) {
-            if(part.getMediaType().equals(MediaType.APPLICATION_JSON_TYPE)) {
+            ContentDisposition cd=part.getContentDisposition();
+            String name=cd!=null && cd.getParameters().containsKey("name") ? cd.getParameters().get("name") : "";
+            
+            if(part.getMediaType().equals(MediaType.APPLICATION_JSON_TYPE) || name.equals("json")) {
                 try {
                     processJSON(contentlet,part.getEntityAs(InputStream.class));
                 } catch (JSONException e) {
-                    return Response.status(Status.BAD_REQUEST).build();
+
+                    Logger.error( this.getClass(), "Error processing JSON for Stream", e );
+
+                    Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_BAD_REQUEST );
+                    responseBuilder.entity( e.getMessage() );
+                    return responseBuilder.build();
                 } catch (IOException e) {
-                    return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+
+                    Logger.error( this.getClass(), "Error processing Stream", e );
+
+                    Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_INTERNAL_SERVER_ERROR );
+                    responseBuilder.entity( e.getMessage() );
+                    return responseBuilder.build();
                 }
             }
-            else if(part.getMediaType().equals(MediaType.APPLICATION_XML_TYPE)) {
+            else if(part.getMediaType().equals(MediaType.APPLICATION_XML_TYPE) || name.equals("xml")) {
                 try {
                     processXML(contentlet, part.getEntityAs(InputStream.class));
                 } catch (Exception e) {
-                    return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+                    Logger.error( this.getClass(), "Error processing Stream", e );
+
+                    Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_INTERNAL_SERVER_ERROR );
+                    responseBuilder.entity( e.getMessage() );
+                    return responseBuilder.build();
                 }
             }
-            else if(part.getMediaType().equals(MediaType.APPLICATION_FORM_URLENCODED_TYPE)) {
+            else if(part.getMediaType().equals(MediaType.APPLICATION_FORM_URLENCODED_TYPE) || name.equals("urlencoded")) {
                 try {
                     processForm(contentlet, part.getEntityAs(InputStream.class));
                 } catch (Exception e) {
-                    return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+                    Logger.error( this.getClass(), "Error processing Stream", e );
+
+                    Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_INTERNAL_SERVER_ERROR );
+                    responseBuilder.entity( e.getMessage() );
+                    return responseBuilder.build();
                 }
             }
             else if(part.getContentDisposition()!=null) {
@@ -404,7 +430,12 @@ public class ContentResource extends WebResource {
                         }   
                     }
                 } catch (IOException e) {
-                    return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+
+                    Logger.error( this.getClass(), "Error processing Stream", e );
+
+                    Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_INTERNAL_SERVER_ERROR );
+                    responseBuilder.entity( e.getMessage() );
+                    return responseBuilder.build();
                 }
             }
         }
@@ -421,19 +452,29 @@ public class ContentResource extends WebResource {
         
         Contentlet contentlet=new Contentlet();
         try {
-            if(request.getContentType().equals(MediaType.APPLICATION_JSON)) {
+            if(request.getContentType().startsWith(MediaType.APPLICATION_JSON)) {
                 processJSON(contentlet, request.getInputStream());
             }
-            else if(request.getContentType().equals(MediaType.APPLICATION_XML)) {
+            else if(request.getContentType().startsWith(MediaType.APPLICATION_XML)) {
                 processXML(contentlet, request.getInputStream());
             }
-            else if(request.getContentType().equals(MediaType.APPLICATION_FORM_URLENCODED)) {
+            else if(request.getContentType().startsWith(MediaType.APPLICATION_FORM_URLENCODED)) {
                 processForm(contentlet, request.getInputStream());
             }
-        } catch(JSONException e) {
-            return Response.status(Status.BAD_REQUEST).build();
-        } catch (Exception e) {
-            return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+        } catch ( JSONException e ) {
+
+            Logger.error( this.getClass(), "Error processing JSON for Stream", e );
+
+            Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_BAD_REQUEST );
+            responseBuilder.entity( e.getMessage() );
+            return responseBuilder.build();
+        } catch ( Exception e ) {
+
+            Logger.error( this.getClass(), "Error processing Stream", e );
+
+            Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_INTERNAL_SERVER_ERROR );
+            responseBuilder.entity( e.getMessage() );
+            return responseBuilder.build();
         }
         
         return saveContent(contentlet,init);
@@ -525,14 +566,29 @@ public class ContentResource extends WebResource {
             
             HibernateUtil.commitTransaction();
             clean = true;
-        } catch (DotContentletStateException e) {
-            return Response.status(Status.CONFLICT).build();
-        } catch(IllegalArgumentException e) {
-            return Response.status(Status.CONFLICT).build();
-        } catch (DotSecurityException e) {
-            return Response.status(Status.FORBIDDEN).build();
-        } catch (Exception e) {
-            Logger.warn(this, e.getMessage(), e);
+        } catch ( DotContentletStateException e ) {
+
+            Logger.error( this.getClass(), "Error saving Contentlet" + e );
+
+            Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_CONFLICT );
+            responseBuilder.entity( e.getMessage() );
+            return responseBuilder.build();
+        } catch ( IllegalArgumentException e ) {
+
+            Logger.error( this.getClass(), "Error saving Contentlet" + e );
+
+            Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_CONFLICT );
+            responseBuilder.entity( e.getMessage() );
+            return responseBuilder.build();
+        } catch ( DotSecurityException e ) {
+
+            Logger.error( this.getClass(), "Error saving Contentlet" + e );
+
+            Response.ResponseBuilder responseBuilder = Response.status( HttpStatus.SC_FORBIDDEN );
+            responseBuilder.entity( e.getMessage() );
+            return responseBuilder.build();
+        } catch ( Exception e ) {
+            Logger.warn( this, e.getMessage(), e );
             return Response.serverError().build();
         }
         finally {
@@ -566,26 +622,34 @@ public class ContentResource extends WebResource {
         Map<String,Object> root=(Map<String,Object>) xstream.fromXML(input);
         processMap(contentlet,root);
     }
-    
-    protected void processForm(Contentlet contentlet, InputStream input) throws Exception {
-        Map<String,Object> map=new HashMap<String,Object>();
-        for(String param : IOUtils.toString(input).split("&")) {
-            String[] parts=param.split("=");
-            String key=URLDecoder.decode(parts[0],"UTF-8");
-            String value=URLDecoder.decode(parts[1],"UTF-8");
-            map.put(key, value);
+
+    protected void processForm ( Contentlet contentlet, InputStream input ) throws Exception {
+
+        Map<String, Object> map = new HashMap<String, Object>();
+        for ( String param : IOUtils.toString( input ).split( "&" ) ) {
+
+            int index = param.indexOf( "=" );
+
+            //Verify if we have a value
+            if ( index != -1 ) {
+                String key = URLDecoder.decode( param.substring( 0, index ), "UTF-8" );
+                String value = URLDecoder.decode( param.substring( index + 1, param.length() ), "UTF-8" );
+                map.put( key, value );
+            }
         }
-        processMap(contentlet, map);
+        processMap( contentlet, map );
     }
     
     protected void processMap(Contentlet contentlet, Map<String,Object> map) {
         String stInode=(String)map.get(Contentlet.STRUCTURE_INODE_KEY);
+
         if(!UtilMethods.isSet(stInode)) {
             String stName=(String)map.get("stName");
             if(UtilMethods.isSet(stName)) {
                 stInode = StructureCache.getStructureByVelocityVarName(stName).getInode();
             }
         }
+
         if(UtilMethods.isSet(stInode)) {
             Structure st=StructureCache.getStructureByInode(stInode);
             if(st!=null && InodeUtils.isSet(st.getInode())) {
@@ -596,6 +660,18 @@ public class ContentResource extends WebResource {
                 }
                 else {
                     contentlet.setLanguageId(APILocator.getLanguageAPI().getDefaultLanguage().getId());
+                }
+                
+                // check for existing identifier
+                if(map.containsKey("identifier")) {
+                    try {
+                        Contentlet existing=APILocator.getContentletAPI().findContentletByIdentifier((String)map.get("identifier"), false, 
+                                contentlet.getLanguageId(), APILocator.getUserAPI().getSystemUser(), false);
+                        APILocator.getContentletAPI().copyProperties(contentlet, existing.getMap());
+                        contentlet.setInode("");
+                    } catch (Exception e) {
+                        throw new RuntimeException("can't get existing content for ident "+map.get("identifier")+" lang "+contentlet.getLanguageId(),e);
+                    }
                 }
                 
                 // build a field map for easy lookup

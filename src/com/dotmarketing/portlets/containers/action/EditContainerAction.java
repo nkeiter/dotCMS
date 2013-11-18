@@ -2,9 +2,7 @@ package com.dotmarketing.portlets.containers.action;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.portlet.ActionRequest;
@@ -21,7 +19,6 @@ import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
 
-import com.dotmarketing.beans.ContainerStructure;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.beans.Identifier;
 import com.dotmarketing.beans.WebAsset;
@@ -227,8 +224,6 @@ public class EditContainerAction extends DotPortletAction implements
 			{
 				Logger.debug(this,"Calling Full Delete Method");
 				WebAsset webAsset = (WebAsset) req.getAttribute(WebKeys.CONTAINER_EDIT);
-				APILocator.getContainerAPI().deleteContainerStructuresByContainer((Container)webAsset);
-
 				if(WebAssetFactory.deleteAsset(webAsset,user)) {
 					SessionMessages.add(httpReq, "message", "message." + webAsset.getType() + ".full_delete");
 				} else {
@@ -252,7 +247,6 @@ public class EditContainerAction extends DotPortletAction implements
 				for(String inode  : inodes)
 				{
 					WebAsset webAsset = (WebAsset) InodeFactory.getInode(inode,Container.class);
-					APILocator.getContainerAPI().deleteContainerStructuresByContainer((Container)webAsset);
 					returnValue &= WebAssetFactory.deleteAsset(webAsset,user);
 				}
 				if(returnValue)
@@ -467,15 +461,29 @@ public class EditContainerAction extends DotPortletAction implements
             cf.setDynamic(true);
         }
 
+		// BEGIN GRAZIANO issue-12-dnd-template
+        if(UtilMethods.isSet(container.getCode())){
+			if(ContainerAjaxUtil.checkMetadataContainerCode(container.getCode()))
+				container.setForMetadata(true);
+			// END GRAZIANO issue-12-dnd-template
+        }
+		// Getting container structure
+		if (!InodeUtils.isSet(cf.getStructureInode())) {
+			Structure currentStructure;
+			if (!InodeUtils.isSet(container.getInode())) {
+				currentStructure = StructureFactory.getDefaultStructure();
+			} else {
+				currentStructure = StructureCache.getStructureByInode(container.getStructureInode());
+				if (!InodeUtils.isSet(currentStructure.getInode()))
+					currentStructure = StructureFactory.getDefaultStructure();
+			}
+			cf.setStructureInode(currentStructure.getInode());
+		}
+
         //gets the container host
         Host host = hostAPI.findParentHost(container, user, false);
         if(host!= null)
         	cf.setHostId(host.getIdentifier());
-
-
-        // Getting container structures
-        cf.setContainerStructures(APILocator.getContainerAPI().getContainerStructures(container));
-
 
 		//Asset Versions to list in the versions tab
 		req.setAttribute(WebKeys.VERSIONS_INODE_EDIT, container);
@@ -536,6 +544,13 @@ public class EditContainerAction extends DotPortletAction implements
 		} else {
 			currentStructure = StructureCache.getStructureByInode(fm.getStructureInode());
 		}
+		container.setStructureInode(currentStructure.getInode());
+		//container.addParent(currentStructure);
+
+		// BEGIN GRAZIANO issue-12-dnd-template
+		if(ContainerAjaxUtil.checkMetadataContainerCode(container.getCode()))
+			container.setForMetadata(true);
+		// END GRAZIANO issue-12-dnd-template
 
 		// it saves or updates the asset
 		if (InodeUtils.isSet(currentContainer.getInode())) {
@@ -563,27 +578,6 @@ public class EditContainerAction extends DotPortletAction implements
 		//Saving the host of the container
 		identifier.setHostId(host.getIdentifier());
 		APILocator.getIdentifierAPI().save(identifier);
-
-		// saving the multiple structures
-		if(container.getMaxContentlets()>0) {
-			String structuresIdsStr = req.getParameter("structuresIds");
-
-			String[] structuresIds = structuresIdsStr.split("#");
-			List<ContainerStructure> csList = new LinkedList<ContainerStructure>();
-
-			for (String structureId : structuresIds) {
-				String code = req.getParameter("code_"+structureId);
-				ContainerStructure cs = new ContainerStructure();
-				cs.setContainerId(container.getIdentifier());
-				cs.setStructureId(structureId);
-				cs.setCode(code);
-				csList.add(cs);
-			}
-
-			APILocator.getContainerAPI().saveContainerStructures(csList);
-
-		}
-
 
 		SessionMessages.add(httpReq, "message", "message.containers.save");
 		ActivityLogger.logInfo(this.getClass(), "Save WebAsset action", "User " + user.getPrimaryKey() + " saved " + container.getTitle(), HostUtil.hostNameUtil(req, _getUser(req)));

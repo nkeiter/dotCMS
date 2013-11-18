@@ -180,20 +180,20 @@ public class FactoryLocator extends Locator<FactoryIndex>{
     }
 
     public static PublishingEndPointFactory getPublisherEndPointFactory(){
-    	return (PublishingEndPointFactory) getInstance(FactoryIndex.PUBLISHER_END_POINT_FACTORY);
-
+        return (PublishingEndPointFactory) getInstance(FactoryIndex.PUBLISHER_END_POINT_FACTORY);
     }
 
+
     public static EnvironmentFactory getEnvironmentFactory(){
-    	return (EnvironmentFactory) getInstance(FactoryIndex.ENVIRONMENT_FACTORY);
+        return (EnvironmentFactory) getInstance(FactoryIndex.ENVIRONMENT_FACTORY);
     }
 
     public static BundleFactory getBundleFactory(){
-    	return (BundleFactory) getInstance(FactoryIndex.BUNDLE_FACTORY);
+            return (BundleFactory) getInstance(FactoryIndex.BUNDLE_FACTORY);
     }
 
     public static PushedAssetsFactory getPushedAssetsFactory(){
-        return (PushedAssetsFactory) getInstance(FactoryIndex.PUSHED_ASSETS_FACTORY);
+    	return (PushedAssetsFactory) getInstance(FactoryIndex.PUSHED_ASSETS_FACTORY);
     }
 
     private static Object getInstance(FactoryIndex index) {

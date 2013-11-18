@@ -67,7 +67,7 @@ public class BinaryCleanupJob implements Job {
 				try {
 					List<File> rFiles = FileUtil.listFilesRecursively(tempDir);
 					for (File rFile : rFiles) {
-						if(FileUtils.isFileOlder(rFile, dDate)){
+						if(FileUtils.isFileNewer(rFile, dDate)){
 							deleteFolder = false;
 							break;
 						}
@@ -80,7 +80,7 @@ public class BinaryCleanupJob implements Job {
 					continue;
 				}
 			}else{
-				if(FileUtils.isFileOlder(file, dDate)){
+				if(FileUtils.isFileNewer(file, dDate)){
 					file.delete();
 				}
 			}

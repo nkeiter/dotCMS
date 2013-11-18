@@ -147,6 +147,23 @@ public class CMSMaintenanceAjax {
         api.optimize(indices);
     }
 
+    public String deletePushedAssets() throws PortalException, SystemException, DotDataException,DotSecurityException {
+
+    	String result = "success";
+
+    	try {
+
+    		APILocator.getPushedAssetsAPI().deleteAllPushedAssets();
+
+    	} catch(Exception e) {
+    		Logger.error(getClass(), e.getMessage(), e);
+    		result = "Could not delete the pushed assets. " + e.getMessage();
+    	}
+
+    	return result;
+    }
+
+
     /**
 	 * The path where tmp files are stored. This gets wiped alot
 	 */
@@ -210,22 +227,6 @@ public class CMSMaintenanceAjax {
 		String[] results = { contdeleted.toString(), contnotfound, conthasreqrel,conthasnoperm };
 
 		return results;
-	}
-
-	public String deletePushedAssets() throws PortalException, SystemException, DotDataException,DotSecurityException {
-
-		String result = "success";
-
-		try {
-
-			APILocator.getPushedAssetsAPI().deleteAllPushedAssets();
-
-		} catch(Exception e) {
-			Logger.error(getClass(), e.getMessage(), e);
-			result = "Could not delete the pushed assets. " + e.getMessage();
-		}
-
-		return result;
 	}
 
     public int removeOldVersions(String date) throws ParseException, SQLException, DotDataException {

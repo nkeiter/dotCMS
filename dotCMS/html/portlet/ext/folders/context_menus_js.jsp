@@ -130,13 +130,15 @@ function getContainerPopUp(i,ctxPath, objId, openNodes, referer,live,working,del
 			strHTML += '</div>';
 		}
 
+
 		if ((working=="1") && (publish=="1") && (deleted!="1") && enterprise) {
 
 			strHTML += '<div dojoType="dijit.MenuItem" iconClass="bundleIcon" onClick="addToBundle(\'' + objId + '\');">';
 			strHTML += '<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "Add-To-Bundle"))%>';
 
+
 			strHTML += '</div>';
-		}
+	    }
 
 		if ((live!="1") && (working=="1") && (publish=="1")) {
 			if (deleted!="1") {
@@ -216,6 +218,7 @@ function getLinkPopUp(i,ctxPath, objId, parentId, openNodes, referer,live,workin
 			strHTML += '</div>';
 		}
 
+
 		if ((working=="1") && (publish=="1") && (deleted!="1") && enterprise && sendingEndpoints) {
 
 		     strHTML += '<div dojoType="dijit.MenuItem" iconClass="sServerIcon" onClick="remotePublish(\'' + objId + '\');">';
@@ -227,6 +230,7 @@ function getLinkPopUp(i,ctxPath, objId, parentId, openNodes, referer,live,workin
 		     strHTML += '<div dojoType="dijit.MenuItem" iconClass="bundleIcon" onClick="addToBundle(\'' + objId + '\');">';
 		     strHTML += '<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "Add-To-Bundle"))%>';
 		     strHTML += '</div>';
+		}
 
 		if ((live!="1") && (working=="1") && (publish=="1")) {
 			if (deleted!="1") {
@@ -298,11 +302,14 @@ function getTemplatePopUp(i,ctxPath, objId, openNodes, referer,live,working,dele
 			strHTML += '</div>';
 		}
 
+
 		if ((working=="1") && (publish=="1") && (deleted!="1") && enterprise) {
+
 			strHTML += '<div dojoType="dijit.MenuItem" iconClass="bundleIcon" onClick="addToBundle(\'' + objId + '\');">';
 			strHTML += '<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "Add-To-Bundle"))%>';
 			strHTML += '</div>';
 		}
+
 
 		if ((live!="1") && (working=="1") && (publish=="1")) {
 			if (deleted!="1") {
@@ -399,6 +406,7 @@ function getHTMLPagePopUp(i,ctxPath, objId, parentId, openNodes, referer,live,wo
 	            strHTML += '<%= UtilMethods.escapeSingleQuotes(LanguageUtil.get(pageContext, "Remote-Publish"))%>';
 	      strHTML += '</div>';
 	    }
+
 
 	    if ((working=="1") && (publish=="1") && (deleted!="1") && enterprise) {
 	        strHTML += '<div dojoType="dijit.MenuItem" iconClass="bundleIcon" onClick="addToBundle(\'' + objId + '\');">';

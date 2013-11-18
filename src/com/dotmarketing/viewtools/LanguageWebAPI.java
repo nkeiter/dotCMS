@@ -122,7 +122,9 @@ public class LanguageWebAPI implements ViewTool {
 	 */
 	public String get(String key) {
 		String language = null;
-		language = (String) request.getSession().getAttribute(com.dotmarketing.util.WebKeys.HTMLPAGE_LANGUAGE);
+		if (language == null)
+			language = (String) request.getSession().getAttribute(
+					com.dotmarketing.util.WebKeys.HTMLPAGE_LANGUAGE);
 		if (language == null)
 			language = String.valueOf(langAPI.getDefaultLanguage().getId());
 		return get(key, language);

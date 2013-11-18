@@ -170,16 +170,21 @@
 				tagName = LTrim(tagName);
 				var tagNameParam = tagName.replace("'", "\\\'");
 				html += "<a href=\"javascript: useThisTagForSearch('"+tagNameParam+"');\">" + tagName + "</a>";
-				/* if (i+1 < result.length) {
-					html += ", ";
-				}*/
+				if (i+1 < result.length) {
+					if(!dojo.byId(suggestedTag+"suggestedTagsWrapper")) {
+						html += ", ";
+					}
+				}
 			}
 			html += "</div>";
 
 			if ((suggestedTag != null) && (suggestedTag != "")) {
 				var tagDiv = document.getElementById(suggestedDiv);
 				tagDiv.innerHTML = html;
-				dojo.style(suggestedTag+"suggestedTagsWrapper", "display", "block");
+
+				if(dojo.byId(suggestedTag+"suggestedTagsWrapper")) {
+					dojo.style(suggestedTag+"suggestedTagsWrapper", "display", "block");
+				}
 			}
 		}
 		else {
@@ -192,7 +197,10 @@
 			tagDiv.innerHTML = "";
 			suggestedTag = "";
 			suggestedDiv = "";
-			dojo.style("tagssuggestedTagsWrapper", "display", "none");
+
+			if(dojo.byId(suggestedTag+"suggestedTagsWrapper")) {
+				dojo.style(suggestedTag+"suggestedTagsWrapper", "display", "none");
+			}
 		}
 	}
 	function useThisTagForSearch(tagSuggested) {

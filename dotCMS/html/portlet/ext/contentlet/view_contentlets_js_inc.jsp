@@ -34,6 +34,7 @@
         var loadingSearchFields = true;
         var categoriesLastSearched = new Array();
 
+        var queryRaw;
         var structureInode;
         var currentStructureFields;
         var currentPage = 1;
@@ -306,6 +307,10 @@
 					}
 					ref+=  ">";
 					ref+=  "</td>";
+                }else{
+	                ref+=  "<td style='width:25px;' valign='top'>";
+	                ref+=  "<span class='newTaskIcon'></span>";
+	                ref+=  "</td>";
                 }
 
                 ref+=  "<td valign='top'>"
@@ -586,7 +591,7 @@
                         dijit.registry.remove(selectedStruct+"."+ fieldContentlet +"Field");
                         var result="<table style='width:210px;' border=\"0\">";
                         result = result + "<tr><td style='padding:0px;'>";
-                        result = result +"<textarea onchange='doSearch()' value=\""+value+"\" dojoType=\"dijit.form.Textarea\" id=\"" + selectedStruct+"."+ fieldContentlet + "Field\" name=\"" + selectedStruct+"."+ fieldContentlet + "Field\" cols=\"20\" rows=\"2\" onkeyup=\"suggestTagsForSearch(this,'"+ selectedStruct+"."+ fieldContentlet + "suggestedTagsDiv');\" style=\"border-color: #7F9DB9; border-style: solid; border-width: 1px; font-family: Verdana, Arial,Helvetica; font-size: 11px; height: 50px; width: 160px;\"></textarea><br/><span style=\"font-size:11px; color:#999;\"><%= LanguageUtil.get(pageContext, "Type-your-tag-You-can-enter-multiple-comma-separated-tags") %></span></td></tr>";
+                        result = result +"<textarea onchange=\"setTimeout(doSearch, 500);\" value=\""+value+"\" dojoType=\"dijit.form.Textarea\" id=\"" + selectedStruct+"."+ fieldContentlet + "Field\" name=\"" + selectedStruct+"."+ fieldContentlet + "Field\" cols=\"20\" rows=\"2\" onkeyup=\"suggestTagsForSearch(this,'"+ selectedStruct+"."+ fieldContentlet + "suggestedTagsDiv');\" style=\"border-color: #7F9DB9; border-style: solid; border-width: 1px; font-family: Verdana, Arial,Helvetica; font-size: 11px; height: 50px; width: 160px;\"></textarea><br/><span style=\"font-size:11px; color:#999;\"><%= LanguageUtil.get(pageContext, "Type-your-tag-You-can-enter-multiple-comma-separated-tags") %></span></td></tr>";
                         result = result + "<tr><td valign=\"top\" style='padding:0px;'>";
                         result = result + "<div id=\"" + selectedStruct+"." + fieldContentlet + "suggestedTagsDiv\" style=\"height: 50px; font-size:10px;font-color:gray; width: 146px; border:1px solid #ccc;overflow: auto;\"></div><span style=\"font-size:11px; color:#999;\"><%= LanguageUtil.get(pageContext, "Suggested-Tags") %></span><br></td></tr></table>";
 
@@ -624,7 +629,7 @@
                         fieldValue = '<%= conFolderValue %>';
                   <%}%>
 
-                  var result = "<div onchange='doSearch()' id=\"FolderHostSelector\" style='width270px' dojoType=\"dotcms.dijit.form.HostFolderFilteringSelect\" includeAll=\"true\" onClick=\"resetHostValue();\" onChange=\"getHostValue();\" "
+                  var result = "<div onchange=\"doSearch(null, '<%=orderBy%>')\" id=\"FolderHostSelector\" style='width270px' dojoType=\"dotcms.dijit.form.HostFolderFilteringSelect\" includeAll=\"true\" onClick=\"resetHostValue();\" onChange=\"getHostValue();\" "
                                                 +" hostId=\"" + hostId + "\" value = \"" + fieldValue + "\"" + "></div>";
 
           hasHostFolderField = true;
@@ -940,20 +945,49 @@
         }
 
         function pushPublishSelectedContentlets() {
-        	var selectedInodes=dojo.query("input[name='publishInode']")
-                                       .filter(function(x){return x.checked;})
-                                       .map(function(x){return x.value;});
 
+            var selectedInodes = getSelectedInodes ();
 			pushHandler.showDialog(selectedInodes);
         }
 
         function addToBundleSelectedContentlets() {
-        	var selectedInodes=dojo.query("input[name='publishInode']")
-                                       .filter(function(x){return x.checked;})
-                                       .map(function(x){return x.value;});
 
+            var selectedInodes = getSelectedInodes ();
 			pushHandler.showAddToBundleDialog(selectedInodes, '<%=LanguageUtil.get(pageContext, "Add-To-Bundle")%>');
+        }
 
+        function getSelectedInodes () {
+
+            var selectedInodes;
+            if ( document.getElementById("fullCommand").value == "true" ) {
+
+                /*
+                 If we choose to select all the elements, not just the ones in the current page, we can't just
+                 send the selected elements as we are using pagination, we only have track of the current page, for
+                 that reason lets send the lucene query that returned the current values LESS the uncheked values.
+                */
+                var excludeInodes = "";
+                if (unCheckedInodes != undefined && unCheckedInodes != null && unCheckedInodes.length > 0) {
+
+                    var inodesToExcludeColl = unCheckedInodes.split(",");
+                    for (var i=0; i<inodesToExcludeColl.length; i++) {
+                        if (inodesToExcludeColl[i] != "" && inodesToExcludeColl[i] != " " && inodesToExcludeColl[i] != "-" ) {
+                            excludeInodes += " inode:" + inodesToExcludeColl[i];
+                        }
+                    }
+                    //excludeInodes = unCheckedInodes.replace(/,/g, " inode:");
+                    excludeInodes = " -(" + excludeInodes + ")";
+                }
+
+                selectedInodes = "query_" + queryRaw + excludeInodes;
+
+            } else {
+                selectedInodes = dojo.query("input[name='publishInode']")
+                                    .filter(function(x){return x.checked;})
+                                    .map(function(x){return x.value;});
+            }
+
+            return selectedInodes;
         }
 
         function unPublishSelectedContentlets(){
@@ -1113,6 +1147,7 @@
                 document.getElementById("structureInode").value = structureInode;
                 hasHostFolderField = false;
                 loadingSearchFields = true;
+                setDotFieldTypeStr = "";
 
                 StructureAjax.getStructureSearchFields (structureInode,
                         { callback:fillFields, async: async });
@@ -1203,6 +1238,12 @@
 
                 var form = document.getElementById("search_form");
                 form.categories = null;
+                if(form.categories != null){
+                	var tempChildNodesLength = form.categories.childNodes.length;
+                	for(var i = 0; i < tempChildNodesLength; i++){
+                		form.categories.removeChild(form.categories.childNodes[0]);
+                	}
+                }
                 dojo.require("dijit.form.MultiSelect");
                 if (data != null) {
                         categories = data;
@@ -1260,8 +1301,10 @@
                 if (dijit.byId('FolderHostSelector') && dijit.byId('FolderHostSelector').attr('updatingSelectedValue')) {
                         setTimeout("doSearch (" + page + ", '" + sortBy + "');", 250);
                 } else {
-
-                        doSearch1 (page, sortBy);
+                		if(dijit.byId('structure_inode'))
+                        	doSearch1 (page, sortBy);
+                        else
+                        	setTimeout("doSearch (" + page + ", '" + sortBy + "');", 250);
                 }
         }
 
@@ -1269,8 +1312,20 @@
 
 
         function doSearch1 (page, sortBy) {
-                var structureInode = dijit.byId('structure_inode').getValue();
 
+
+                if (page == undefined || page == null ) {
+                    //Unless we are using pagination we don't need to keep the All selection across searches
+                    if(dijit.byId('checkAll')!= undefined)
+                    	clearAllContentsSelection();
+                }
+
+	            var structureInode = "";
+
+
+	            if(dijit.byId('structure_inode')) {
+	              structureInode  = dijit.byId('structure_inode').getValue();
+	            }
                 if(structureInode ==""){
                         dijit.byId('structure_inode').focus() ;
                         return false;
@@ -1416,7 +1471,7 @@
                         currentPage = page;
 
                 if (sortBy != null) {
-                        if (sortBy == currentSortBy)
+                        if (sortBy == currentSortBy && sortBy.indexOf("desc")==-1)
                                 sortBy = sortBy + " desc";
                         currentSortBy = sortBy;
                 }
@@ -1545,6 +1600,8 @@
 
         function clearAllContentsMessage()      {
                 $('tablemessage').innerHTML = " &nbsp ";
+                unCheckedInodes = "";
+                document.getElementById('allUncheckedContentsInodes').value = "";
                 document.getElementById("fullCommand").value = "false";
                 return true;
         }
@@ -1712,7 +1769,7 @@
 
 
                         // NEW CONTEXT MENU
-                        
+
                         if ((live || working) && (read=="1") && (!deleted)) {
                                 if(selectedStructureVarName == 'calendarEvent'){
                                   if (write=="1"){
@@ -1766,7 +1823,6 @@
 							}
 						}
 
-						
 						if(enterprise && sendingEndpoints && workflowMandatory=="false") {
 								popupMenus += "<div dojoType=\"dijit.MenuItem\" iconClass=\"sServerIcon\" onClick=\"remotePublish('" + cellData.inode + "','<%= referer %>');\"><%=LanguageUtil.get(pageContext, "Remote-Publish") %></div>";
 
@@ -1788,7 +1844,7 @@
                         if ((!live) && working && (publish=="1") && workflowMandatory=="false") {
                            if(selectedStructureVarName == 'calendarEvent'){
                              if (!deleted){
-                                        popupMenus += "<div dojoType=\"dijit.MenuItem\" iconClass=\"archiveIcon\" onClick=\"deleteEvent('" + cellData.inode + "','','" + escape('<%= referer %>') + "');\"><%=LanguageUtil.get(pageContext, "Archive") %></div>";
+                                        popupMenus += "<div dojoType=\"dijit.MenuItem\" iconClass=\"archiveIcon\" onClick=\"deleteContentlet('" + cellData.inode + "','','" + escape('<%= referer %>') + "'" + ", '" + contentStructureType + "', '" + structure_id + "');\"><%=LanguageUtil.get(pageContext, "Archive") %></div>";
                                  }else{
                                         popupMenus += "<div dojoType=\"dijit.MenuItem\" iconClass=\"unarchiveIcon\" onClick=\"unarchiveEvent('" + cellData.inode + "','<%= user.getUserId() %>','<%= referer %>'," + liveSt + "," + workingSt + "," + write + ");\"><%=LanguageUtil.get(pageContext, "Un-Archive") %></div>";
                              }
@@ -1821,7 +1877,7 @@
                 }
 
                 popupMenusDiv.innerHTML = popupMenus;
-                
+
 
                 dojo.parser.parse(dojo.byId("results_table_popup_menus"));
                 dojo.parser.parse(dojo.byId("results_table"));
@@ -2094,7 +2150,7 @@
                            ((request.getLocalPort()!=80) ? ":"+request.getLocalPort() : "")+
                            "/api/content/render/false";
                         %>
-                        var queryRaw = counters["luceneQueryRaw"];
+                        queryRaw = counters["luceneQueryRaw"];
                         var queryfield=document.getElementById("luceneQuery");
                         queryfield.value=queryRaw;
                         var queryFrontend = counters["luceneQueryFrontend"];
@@ -2203,19 +2259,26 @@
                 } else {
                     dijit.byId('archiveButton').setAttribute("disabled", false);
                     dijit.byId('publishButton').setAttribute("disabled", false);
-                    if(typeof dijit.byId('addToBundleButton') !== "undefined") {
-                    	dijit.byId('addToBundleButton').setAttribute("disabled", false);
-                    	dijit.byId('pushPublishButton').setAttribute("disabled", false);
-                    }
+
+                    	<% if ( enterprise ) { %>
+                    		if(typeof dijit.byId('addToBundleButton') !== "undefined") {
+	                    	<% 	if ( sendingEndpoints ) { %>
+	                    			dijit.byId('pushPublishButton').setAttribute("disabled", false);
+	                    	 <% } %>
+							}
+                    		dijit.byId('addToBundleButton').setAttribute("disabled", false);
+
+                    	<% } %>
+
                     dijit.byId('unPublishButton').setAttribute("disabled", false);
                     dijit.byId('unlockButton').setAttribute("disabled", false);
                     <%=(canReindex?"dijit.byId('reindexButton').setAttribute(\"disabled\", false);":"") %>
                 }
                 return;
             }
-            
+
         }
-        
+
         // nothing selected
        	if (showArchive) {
                     dijit.byId("unArchiveButton").setAttribute("disabled", true);
@@ -2225,10 +2288,18 @@
         } else {
                     dijit.byId('archiveButton').setAttribute("disabled", true);
                     dijit.byId('publishButton').setAttribute("disabled", true);
-                    if(typeof dijit.byId('addToBundleButton') !== "undefined") { 
-                    	dijit.byId('addToBundleButton').setAttribute("disabled", true);
-                    	dijit.byId('pushPublishButton').setAttribute("disabled", true);
-                    }
+
+                    <% if ( enterprise ) { %>
+                    		if(typeof dijit.byId('addToBundleButton') !== "undefined") {
+	                    	<% 	if ( sendingEndpoints ) { %>
+
+	                    			dijit.byId('pushPublishButton').setAttribute("disabled", true);
+	                    	 <% } %>
+	                    	 }
+                    			dijit.byId('addToBundleButton').setAttribute("disabled", true);
+
+                    	<% } %>
+
                     dijit.byId('unPublishButton').setAttribute("disabled", true);
                     dijit.byId("unlockButton").setAttribute("disabled", true);
                      <%=(canReindex?"dijit.byId('reindexButton').setAttribute(\"disabled\", true);":"") %>
@@ -2501,11 +2572,13 @@
 					: (dojo.byId("whereToSend"))
 						? dojo.byId("whereToSend").value
 								: "";
+
+            var forcePush = (dijit.byId("forcePush")) ? dijit.byId("forcePush").checked : false;
 			// END: PUSH PUBLISHING ACTIONLET
 
 
     		BrowserAjax.saveFileAction(selectedItem,wfActionAssign,wfActionId,wfActionComments,wfConId, publishDate,
-    				publishTime, expireDate, expireTime, neverExpire, whereToSend, fileActionCallback);
+    				publishTime, expireDate, expireTime, neverExpire, whereToSend, forcePush, fileActionCallback);
 
     	}
 

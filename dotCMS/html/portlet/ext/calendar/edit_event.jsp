@@ -27,6 +27,8 @@
 	//this file is a copy of the edit_contentlet.jsp that has
 	//some modifications to support events custom fields and actions
  %>
+ 
+<script type='text/javascript' src='/dwr/interface/LanguageAjax.js'></script> 
 
 <%
 	PermissionAPI conPerAPI = APILocator.getPermissionAPI();
@@ -137,6 +139,7 @@ var editButtonRow="editEventButtonRow";
 	<input name="wfExpireDate" id="wfExpireDate" type="hidden" value="">
 	<input name="wfExpireTime" id="wfExpireTime" type="hidden" value="">
 	<input name="wfNeverExpire" id="wfNeverExpire" type="hidden" value="">
+    <input name="whereToSend" id="whereToSend" type="hidden" value="">
 
 	<liferay:box top="/html/common/box_top.jsp" bottom="/html/common/box_bottom.jsp">
 	<liferay:param name="box_title" value="<%= LanguageUtil.get(pageContext, \"edit-event\") %>" />
@@ -196,7 +199,8 @@ var editButtonRow="editEventButtonRow";
 				<%@include file="/html/portlet/ext/common/edit_permissions_tab_inc.jsp" %>
 			<% } else if(f.getFieldType().equals(Field.FieldType.RELATIONSHIPS_TAB.toString())){%>
     	   		<%if(counter==0){%>
-					<% relationshipsTabFieldExists =  true; %>                    <jsp:include page="/html/portlet/ext/contentlet/edit_contentlet_relationships.jsp" />
+					<% relationshipsTabFieldExists =  true; %>
+                    <jsp:include page="/html/portlet/ext/contentlet/edit_contentlet_relationships.jsp" />
 				<%}%>
     	    	<%counter++;%>
 			<% } else  {
@@ -205,7 +209,15 @@ var editButtonRow="editEventButtonRow";
     	  		if(f.getFieldType().equals(Field.FieldType.CATEGORY.toString())) {
     				CategoryAPI catAPI = APILocator.getCategoryAPI();
     				formValue =  (List<Category>) catAPI.getParents(contentlet, user, false);
-    	  			catCounter++;
+
+    				try {
+	    				Category category = catAPI.find(f.getValues(), user, false);
+		    			if(category != null && catAPI.canUseCategory(category, user, false)) {
+		    				catCounter++;
+		    			}
+	    			} catch(Exception e) {
+	    				Logger.debug(this, "Error in CategoryAPI", e);
+	    			}
     	  		} else {
     				formValue = (Object) contentletForm.getFieldValueByVar(f.getVelocityVarName());
     	  		}
@@ -324,7 +336,8 @@ var editButtonRow="editEventButtonRow";
 
 <!-- To show lightbox effect "Saving Content.."  -->
 <div id="savingContentDialog" dojoType="dijit.Dialog" title="<%= LanguageUtil.get(pageContext, "saving-content") %>" style="display: none;">
-	<div dojoType="dijit.ProgressBar" style="width:200px;text-align:center;" indeterminate="true" jsId="saveProgress" id="saveProgress"></div>
+    <div id="maxSizeFileAlert" style="color:red; font-weight:bold; width: 200px; margin-bottom: 8px"></div>
+    <div dojoType="dijit.ProgressBar" style="width:200px;text-align:center;" indeterminate="true" jsId="saveProgress" id="saveProgress"></div>
 </div>
 
 <script type="text/javascript">

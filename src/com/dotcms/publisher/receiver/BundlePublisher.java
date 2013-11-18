@@ -13,6 +13,7 @@ import com.dotmarketing.exception.DotHibernateException;
 import com.dotmarketing.util.Config;
 import com.dotmarketing.util.ConfigUtils;
 import com.dotmarketing.util.Logger;
+
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarInputStream;
@@ -28,6 +29,13 @@ public class BundlePublisher extends Publisher {
 
     private List<IHandler> handlers = new ArrayList<IHandler>();
 
+    /**
+     * Initializes this Publisher adding all the handlers that can interact with a Bundle.
+     *
+     * @param config Class that have the main configuration values for the Bundle we are trying to publish
+     * @return This bundle configuration ({@link PublisherConfig})
+     * @throws DotPublishingException If fails initializing this Publisher Handlers
+     */
     @Override
     public PublisherConfig init ( PublisherConfig config ) throws DotPublishingException {
 
@@ -45,6 +53,7 @@ public class BundlePublisher extends Publisher {
         handlers.add( new CategoryHandler( config ) );
         handlers.add( new HostHandler( config ) );
         handlers.add( new FolderHandler( config ) );
+        handlers.add( new WorkflowHandler( config ) );
 
         if ( Config.getBooleanProperty( "PUSH_PUBLISHING_PUSH_STRUCTURES" ) ) {
             handlers.add( new StructureHandler( config ) );
@@ -60,6 +69,7 @@ public class BundlePublisher extends Publisher {
         handlers.add( new HTMLPageHandler( config ) );
 
         handlers.add( new ContentHandler( config ) );
+        handlers.add( new ContentWorkflowHandler( config ) );
         handlers.add( new LanguageHandler( config ) );
         handlers.add( new OSGIHandler( config ) );
         handlers.add( new LinkHandler( config ) );
@@ -70,77 +80,86 @@ public class BundlePublisher extends Publisher {
         return this.config;
     }
 
+    /**
+     * Processes a Bundle, in order to do that it: Un-compress the Bundle file, then each handler for this Publisher will check if inside<br/>
+     * the bundle there is content it needs to be handle as each {@link IHandler Handler} handles a different type of content, and finally<br/>
+     * after the "handle" for each Handler the status are set depending if was a successful operation or not.
+     *
+     * @param status Current status of the Publishing process
+     * @return This bundle configuration ({@link PublisherConfig})
+     * @throws DotPublishingException If fails Handling any on the elements of this bundle
+     */
     @Override
-    public PublisherConfig process ( final PublishStatus status ) throws DotPublishingException {
+    public PublisherConfig process(final PublishStatus status) throws DotPublishingException {
         if ( LicenseUtil.getLevel() < 300 ) {
-            throw new RuntimeException( "need an enterprise licence to run this" );
+            throw new RuntimeException("need an enterprise licence to run this");
         }
 
         String bundleName = config.getId();
-        String bundleFolder = bundleName.substring( 0, bundleName.indexOf( ".tar.gz" ) );
-        String bundlePath = ConfigUtils.getBundlePath() + File.separator + BundlePublisherResource.MY_TEMP;//FIXME
+        String bundleFolder = bundleName.substring(0, bundleName.indexOf(".tar.gz"));
+        String bundlePath = ConfigUtils.getBundlePath()+File.separator+BundlePublisherResource.MY_TEMP;//FIXME
 
         //Publish the bundle extracted
         PublishAuditHistory currentStatusHistory = null;
         EndpointDetail detail = new EndpointDetail();
 
-        try {
+        try{
             //Update audit
-            currentStatusHistory = auditAPI.getPublishAuditStatus( bundleFolder ).getStatusPojo();
+            currentStatusHistory = auditAPI.getPublishAuditStatus(bundleFolder).getStatusPojo();
 
-            currentStatusHistory.setPublishStart( new Date() );
-            detail.setStatus( PublishAuditStatus.Status.PUBLISHING_BUNDLE.getCode() );
-            detail.setInfo( "Publishing bundle" );
-            currentStatusHistory.addOrUpdateEndpoint( config.getGroupId(), config.getEndpoint(), detail );
+            currentStatusHistory.setPublishStart(new Date());
+            detail.setStatus(PublishAuditStatus.Status.PUBLISHING_BUNDLE.getCode());
+            detail.setInfo("Publishing bundle");
+            currentStatusHistory.addOrUpdateEndpoint(config.getGroupId(), config.getEndpoint(), detail);
 
             auditAPI.updatePublishAuditStatus( bundleFolder, PublishAuditStatus.Status.PUBLISHING_BUNDLE, currentStatusHistory );
-        } catch ( Exception e ) {
-            Logger.error( BundlePublisher.class, "Unable to update audit table : " + e.getMessage(), e );
+        }catch (Exception e) {
+            Logger.error(BundlePublisher.class,"Unable to update audit table : " + e.getMessage(),e);
         }
 
-        File folderOut = new File( bundlePath + bundleFolder );
+        File folderOut = new File(bundlePath+bundleFolder);
         folderOut.mkdir();
 
         // Extract file to a directory
         InputStream bundleIS;
         try {
-            bundleIS = new FileInputStream( bundlePath + bundleName );
+            bundleIS = new FileInputStream(bundlePath+bundleName);
             untar( bundleIS, folderOut.getAbsolutePath() + File.separator + bundleName, bundleName );
-        } catch ( FileNotFoundException e ) {
-            throw new DotPublishingException( "Cannot extract the selected archive", e );
+        } catch (FileNotFoundException e) {
+            throw new DotPublishingException("Cannot extract the selected archive", e);
         }
 
         try {
             HibernateUtil.startTransaction();
 
             //Execute the handlers
-            for ( IHandler handler : handlers ) {
-                handler.handle( folderOut );
+            for(IHandler handler : handlers ){
+                handler.handle(folderOut);
             }
 
             HibernateUtil.commitTransaction();
-        } catch ( Exception e ) {
+        } catch (Exception e) {
             bundleSuccess = false;
             try {
                 HibernateUtil.rollbackTransaction();
-            } catch ( DotHibernateException e1 ) {
-                Logger.error( PublisherAPIImpl.class, e.getMessage(), e1 );
+            } catch (DotHibernateException e1) {
+                Logger.error(PublisherAPIImpl.class,e.getMessage(),e1);
             }
             Logger.error( PublisherAPIImpl.class, "Error Publishing Bundle: " + e.getMessage(), e );
 
             //Update audit
             try {
-                detail.setStatus( PublishAuditStatus.Status.FAILED_TO_PUBLISH.getCode() );
-                detail.setInfo( "Failed to publish because an error occurred: " + e.getMessage() );
-                detail.setStackTrace( ExceptionUtils.getStackTrace( e ) );
-                currentStatusHistory.addOrUpdateEndpoint( config.getGroupId(), config.getEndpoint(), detail );
-                currentStatusHistory.setBundleEnd( new Date() );
+                detail.setStatus(PublishAuditStatus.Status.FAILED_TO_PUBLISH.getCode());
+                detail.setInfo("Failed to publish because an error occurred: "+e.getMessage());
+                detail.setStackTrace(ExceptionUtils.getStackTrace(e));
+                currentStatusHistory.addOrUpdateEndpoint(config.getGroupId(), config.getEndpoint(), detail);
+                currentStatusHistory.setBundleEnd(new Date());
 
                 auditAPI.updatePublishAuditStatus( bundleFolder, PublishAuditStatus.Status.FAILED_TO_PUBLISH, currentStatusHistory );
-            } catch ( DotPublisherException e1 ) {
-                throw new DotPublishingException( "Cannot update audit: ", e );
+            } catch (DotPublisherException e1) {
+                throw new DotPublishingException("Cannot update audit: ", e);
             }
-            throw new DotPublishingException( "Error Publishing: " + e, e );
+            throw new DotPublishingException("Error Publishing: " +  e, e);
         }
 
         Map<String, String> assetsDetails = null;
@@ -154,12 +173,7 @@ public class BundlePublisher extends Publisher {
             //Get the identifiers on this bundle
             assetsDetails = new HashMap<String, String>();
             List<PublishQueueElement> bundlerAssets = readConfig.getAssets();
-            if ( readConfig.getLuceneQueries() != null && !readConfig.getLuceneQueries().isEmpty() ) {
-                List<String> assets = com.dotcms.publisher.util.PublisherUtil.getContentIds( readConfig.getLuceneQueries() );
-                for ( String identifier : assets ) {
-                    assetsDetails.put( identifier, identifier );
-                }
-            }
+
             if ( bundlerAssets != null && !bundlerAssets.isEmpty() ) {
                 for ( PublishQueueElement asset : bundlerAssets ) {
                     assetsDetails.put( asset.getAsset(), asset.getType() );
@@ -171,87 +185,97 @@ public class BundlePublisher extends Publisher {
 
         try {
             //Update audit
-            detail.setStatus( PublishAuditStatus.Status.SUCCESS.getCode() );
-            detail.setInfo( "Everything ok" );
-            currentStatusHistory.addOrUpdateEndpoint( config.getGroupId(), config.getEndpoint(), detail );
-            currentStatusHistory.setBundleEnd( new Date() );
+            detail.setStatus(PublishAuditStatus.Status.SUCCESS.getCode());
+            detail.setInfo("Everything ok");
+            currentStatusHistory.addOrUpdateEndpoint(config.getGroupId(), config.getEndpoint(), detail);
+            currentStatusHistory.setBundleEnd(new Date());
             currentStatusHistory.setAssets( assetsDetails );
             auditAPI.updatePublishAuditStatus( bundleFolder, PublishAuditStatus.Status.SUCCESS, currentStatusHistory );
             HibernateUtil.commitTransaction();
-        } catch ( Exception e ) {
-            Logger.error( BundlePublisher.class, "Unable to update audit table : " + e.getMessage(), e );
+        }catch (Exception e) {
+            Logger.error(BundlePublisher.class,"Unable to update audit table : " + e.getMessage(),e);
         }
 
         try {
             HibernateUtil.closeSession();
-        } catch ( DotHibernateException e ) {
-            Logger.warn( this, e.getMessage(), e );
+        } catch (DotHibernateException e) {
+            Logger.warn(this, e.getMessage(),e);
         }
         return config;
     }
 
 
-    @SuppressWarnings ("rawtypes")
+    @SuppressWarnings("rawtypes")
     @Override
-    public List<Class> getBundlers () {
+    public List<Class> getBundlers() {
         List<Class> list = new ArrayList<Class>();
 
         return list;
     }
 
-
-    private void untar ( InputStream bundle, String path, String fileName ) {
+    /**
+     * Untars a given tar bundle file in order process the content on it.
+     *
+     * @param bundle   Compressed Bundle file
+     * @param path
+     * @param fileName
+     */
+    private void untar(InputStream bundle, String path, String fileName) {
         TarEntry entry;
         TarInputStream inputStream = null;
         FileOutputStream outputStream = null;
 
         try {
             // get a stream to tar file
-            InputStream gstream = new GZIPInputStream( bundle );
-            inputStream = new TarInputStream( gstream );
+            InputStream gstream = new GZIPInputStream(bundle);
+            inputStream = new TarInputStream(gstream);
 
             // For each entry in the tar, extract and save the entry to the file
             // system
-            while ( null != (entry = inputStream.getNextEntry()) ) {
+            while (null != (entry = inputStream.getNextEntry())) {
                 // for each entry to be extracted
                 int bytesRead;
 
-                String pathWithoutName = path.substring( 0,
-                        path.indexOf( fileName ) );
+                String pathWithoutName = path.substring(0,
+                        path.indexOf(fileName));
 
                 // if the entry is a directory, create the directory
-                if ( entry.isDirectory() ) {
-                    File fileOrDir = new File( pathWithoutName + entry.getName() );
+                if (entry.isDirectory()) {
+                    File fileOrDir = new File(pathWithoutName + entry.getName());
                     fileOrDir.mkdir();
                     continue;
                 }
 
                 // write to file
                 byte[] buf = new byte[1024];
-                outputStream = new FileOutputStream( pathWithoutName
-                        + entry.getName() );
-                while ( (bytesRead = inputStream.read( buf, 0, 1024 )) > -1 )
-                    outputStream.write( buf, 0, bytesRead );
+                outputStream = new FileOutputStream(pathWithoutName
+                        + entry.getName());
+                while ((bytesRead = inputStream.read(buf, 0, 1024)) > -1)
+                    outputStream.write(buf, 0, bytesRead);
                 try {
-                    if ( null != outputStream )
+                    if ( null != outputStream ) {
                         outputStream.close();
-                } catch ( Exception e ) {
+                    }
+                } catch (Exception e) {
+                    Logger.warn( this.getClass(), "Error Closing Stream.", e );
                 }
             }// while
 
-        } catch ( Exception e ) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally { // close your streams
-            if ( inputStream != null ) {
+            if (inputStream != null) {
                 try {
                     inputStream.close();
-                } catch ( IOException e ) {
+                } catch (IOException e) {
+                    Logger.warn( this.getClass(), "Error Closing Stream.", e );
                 }
             }
-            if ( outputStream != null ) {
+            if (outputStream != null) {
                 try {
                     outputStream.close();
-                } catch ( IOException e ) {
+                } catch (IOException e) {
+                    Logger.warn( this.getClass(), "Error Closing Stream.", e );
                 }
             }
         }

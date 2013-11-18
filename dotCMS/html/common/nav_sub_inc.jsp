@@ -685,7 +685,7 @@ dojo.require("dojo.cookie");
 			<% } %>
 		<!-- End Server Info -->
 		<div dojoType="dijit.layout.ContentPane" style="width:400px;height:150px;" class="box" hasShadow="true" id="dotBackEndDialogCP"></div>
-		<div class="copyright">&copy;<%=new GregorianCalendar().get(Calendar.YEAR)%> dotCMS Inc. <%= LanguageUtil.get(pageContext, "All-rights-reserved") %>.</div>
+		<div class="copyright">&copy;<%=new GregorianCalendar().get(Calendar.YEAR)%> dotCMS Software, LLC <%= LanguageUtil.get(pageContext, "All-rights-reserved") %>.</div>
 	</div>
 
 	<!-- Support pop up -->
@@ -715,27 +715,29 @@ dojo.require("dojo.cookie");
 
 
 
-    <%if(session.getAttribute("_autoupdater_showUpdate") == null) {%>
-        <script type="text/javascript" src="/dwr/interface/AutoUpdaterAjax.js"></script>
-        <script>
-            dojo.addOnLoad(function(){
-                AutoUpdaterAjax.getLatestVersionInfo(dojo.hitch(enableAutoUpdaterLink));
-            })
-        </script>
-    <%}else if((Boolean) session.getAttribute("_autoupdater_showUpdate") == true) {%>
-        <script>
-            dojo.addOnLoad(function(){
-                var enableupdatevar = {
-                        showUpdate : <%=session.getAttribute("_autoupdater_showUpdate")%>,
-                        major : "<%=session.getAttribute("_autoupdater_major")%>",
-                        minor : "<%=session.getAttribute("_autoupdater_minor")%>",
-                        buildNumber : '0'
-                }
-                if(enableupdatevar.showUpdate){
-                    enableAutoUpdaterLink(enableupdatevar);
-                }
-            })
-        </script>
-    <%}%>
+    <%if(APILocator.getUserAPI().isCMSAdmin(user)) {
+	    if(session.getAttribute("_autoupdater_showUpdate") == null) {%>
+	        <script type="text/javascript" src="/dwr/interface/AutoUpdaterAjax.js"></script>
+	        <script>
+	            dojo.addOnLoad(function(){
+	                AutoUpdaterAjax.getLatestVersionInfo(dojo.hitch(enableAutoUpdaterLink));
+	            })
+	        </script>
+	    <%}else if((Boolean) session.getAttribute("_autoupdater_showUpdate") == true) {%>
+	        <script>
+	            dojo.addOnLoad(function(){
+	                var enableupdatevar = {
+	                        showUpdate : <%=session.getAttribute("_autoupdater_showUpdate")%>,
+	                        major : "<%=session.getAttribute("_autoupdater_major")%>",
+	                        minor : "<%=session.getAttribute("_autoupdater_minor")%>",
+	                        buildNumber : '0'
+	                }
+	                if(enableupdatevar.showUpdate){
+	                    enableAutoUpdaterLink(enableupdatevar);
+	                }
+	            })
+	        </script>
+    <%	}
+    }%>
 
 

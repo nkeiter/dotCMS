@@ -1,7 +1,6 @@
 package com.dotmarketing.portlets.structure.model;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -46,11 +45,10 @@ public class Structure extends Inode implements Permissionable, Exportable, Impo
 	private boolean system;
 	private String velocityVarName;
 	private String urlMapPattern;
-	private String host;
-	private String folder;
+	private String host="SYSTEM_HOST";
+	private String folder="SYSTEM_FOLDER";
 	private String publishDateVar;
 	private String expireDateVar;
-	private Date modDate;
 
 	public List<Exportable> getDependencies() {
 		// TODO Auto-generated method stub
@@ -92,7 +90,6 @@ public class Structure extends Inode implements Permissionable, Exportable, Impo
 
 	public Structure () {
 		super.setType("structure");
-		modDate = new Date();
 	}
 
 	public boolean isDefaultStructure() {
@@ -315,7 +312,7 @@ public class Structure extends Inode implements Permissionable, Exportable, Impo
 
 
 	public String getFolder() {
-		return !UtilMethods.isSet(folder)?"SYSTEM_FOLDER":folder;
+		return folder;
 	}
 
 	public void setFolder(String folder) {
@@ -323,7 +320,7 @@ public class Structure extends Inode implements Permissionable, Exportable, Impo
 	}
 
 	public String getHost() {
-		return !UtilMethods.isSet(host)?"SYSTEM_HOST":host;
+		return host;
 	}
 
 	public void setHost(String host) {
@@ -353,15 +350,5 @@ public class Structure extends Inode implements Permissionable, Exportable, Impo
     public void setExpireDateVar(String expireDateVar) {
         this.expireDateVar = expireDateVar;
     }
-
-
-	public Date getModDate() {
-		return modDate;
-	}
-
-
-	public void setModDate(Date modDate) {
-		this.modDate = modDate;
-	}
 
 }

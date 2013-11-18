@@ -2,7 +2,6 @@ package com.dotmarketing.portlets.categories.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,9 +41,7 @@ public class Category extends Inode implements Serializable {
 	private boolean active = true;
 	private String keywords;
 	private String categoryVelocityVarName;
-	private Date modDate;
-
-	/**
+    /**
      * @return Returns the active.
      */
     public boolean isActive() {
@@ -59,7 +56,6 @@ public class Category extends Inode implements Serializable {
 	/** default constructor */
 	public Category() {
 		super.setType("category");
-		modDate = new Date();
 	}
 
 	/** minimal constructor */
@@ -70,7 +66,7 @@ public class Category extends Inode implements Serializable {
 	public String getInode() {
 		if(InodeUtils.isSet(this.inode))
     		return this.inode;
-
+    	
     	return "";
 	}
 
@@ -134,18 +130,18 @@ public class Category extends Inode implements Serializable {
     public void setKey(String key) {
         this.key = key;
     }
-
-
-
-
+    
+    
+    
+    
     public String getKeywords() {
         return this.keywords;
     }
     public void setKeywords(String keywords) {
         this.keywords = keywords;
     }
-
-
+    
+    
 	@SuppressWarnings("unchecked")
 	public boolean hasActiveChildren() {
 		HibernateUtil dh = new HibernateUtil ();
@@ -161,7 +157,7 @@ public class Category extends Inode implements Serializable {
 		}
 		return ((Integer)results.get(0)).intValue() > 0;
 	}
-
+	
 	public Map<String, Object> getMap () {
         HashMap<String, Object> map = new HashMap<String, Object> ();
         map.put("categoryName", this.getCategoryName());
@@ -172,22 +168,17 @@ public class Category extends Inode implements Serializable {
         map.put("inode", this.getInode());
         return map;
     }
-
+	
 	public void setCategoryVelocityVarName(String categoryVelocityVarName) {
 		this.categoryVelocityVarName = categoryVelocityVarName;
 	}
 	public String getCategoryVelocityVarName() {
 		return categoryVelocityVarName;
 	}
-
-	public Date getModDate() {
-		return modDate;
-	}
-	public void setModDate(Date modDate) {
-		this.modDate = modDate;
-	}
-	//The following methods are part of the permissionable interface
-	//to define what kind of permissions are accepted by categories
+	
+	
+	//The following methods are part of the permissionable interface 
+	//to define what kind of permissions are accepted by categories 
 	//and also how categories should behave in terms of cascading
     /**
      * @author David H Torres
@@ -207,7 +198,7 @@ public class Category extends Inode implements Serializable {
 				PermissionAPI.PERMISSION_EDIT_PERMISSIONS));
 		return accepted;
 	}
-
+	
 	@Override
 	public Permissionable getParentPermissionable() throws DotDataException {
 		CategoryAPI catAPI = APILocator.getCategoryAPI();
@@ -237,16 +228,16 @@ public class Category extends Inode implements Serializable {
 			try{
 				host = APILocator.getHostAPI().findSystemHost(systemUser, false);
 			}catch(Exception e){Logger.error(Category.class, e.getMessage(), e);}
-
+			
 			return host;
 		}
 	}
-
+	
 	@Override
 	public boolean isParentPermissionable() {
 		return true;
 	}
-
+	
 	@Override
 	public String toString() {
 		return new ToStringBuilder(this).
@@ -259,5 +250,5 @@ public class Category extends Inode implements Serializable {
 	       append("categoryVelocityVarName", categoryVelocityVarName).
 	       toString();
 	}
-
+	
 }

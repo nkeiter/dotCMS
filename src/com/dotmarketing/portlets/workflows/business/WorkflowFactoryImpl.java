@@ -36,6 +36,7 @@ import com.dotmarketing.portlets.workflows.model.WorkflowScheme;
 import com.dotmarketing.portlets.workflows.model.WorkflowSearcher;
 import com.dotmarketing.portlets.workflows.model.WorkflowStep;
 import com.dotmarketing.portlets.workflows.model.WorkflowTask;
+import com.dotmarketing.util.InodeUtils;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UUIDGenerator;
 import com.dotmarketing.util.UtilMethods;
@@ -135,6 +136,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		final WorkflowScheme scheme = new WorkflowScheme();
 		row.put("entryActionId", row.get("entry_action_id"));
 		row.put("defaultScheme", row.get("default_scheme"));
+		row.put("modDate", row.get("mod_date"));
 
 		BeanUtils.copyProperties(scheme, row);
 
@@ -215,6 +217,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 					scheme.setName("Default Scheme");
 					scheme.setDescription("This is the default workflow scheme that will be applied to all content");
 					scheme.setDefaultScheme(true);
+					scheme.setModDate(new Date());
 
 					db.setSQL(sql.INSERT_SCHEME);
 					db.addParam(scheme.getId());
@@ -224,6 +227,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 					db.addParam(scheme.isMandatory());
 					db.addParam((String) null);
 					db.addParam(scheme.isDefaultScheme());
+					db.addParam(scheme.getModDate());
 					db.loadResult();
 
 					db.setSQL(sql.UPDATE_SCHEME_SET_TO_DEFAULT);
@@ -324,6 +328,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 	}
 
 	public void deleteAction(WorkflowAction action) throws DotDataException {
+		String stepId = action.getStepId();
 		final DotConnect db = new DotConnect();
 		db.setSQL(sql.DELETE_ACTION);
 		db.addParam(action.getId());
@@ -331,9 +336,15 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		WorkflowStep proxy = new WorkflowStep();
 		proxy.setId(action.getStepId());
 		cache.removeActions(proxy);
+
+		// update scheme mod date
+		WorkflowStep step = findStep(stepId);
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
 	}
 
 	public void deleteActionClass(WorkflowActionClass actionClass) throws DotDataException {
+		String actionId = actionClass.getActionId();
 		final DotConnect db = new DotConnect();
 		db.setSQL(sql.DELETE_ACTION_CLASS_PARAM_BY_ACTION_CLASS);
 		db.addParam(actionClass.getId());
@@ -342,12 +353,25 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		db.setSQL(sql.DELETE_ACTION_CLASS);
 		db.addParam(actionClass.getId());
 		db.loadResult();
+		
+
+		// update scheme mod date
+		WorkflowAction action = findAction(actionId);
+		WorkflowStep step = findStep(action.getStepId());
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
 	}
 
 	public void deleteActionClassByAction(WorkflowAction action) throws DotDataException, DotSecurityException {
+		String actionId = action.getId();
 		final DotConnect db = new DotConnect();
 		db.setSQL(sql.DELETE_ACTION_CLASS_BY_ACTION);
 		db.addParam(action.getId());
+		
+		// update scheme mod date
+		WorkflowStep step = findStep(actionId);
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
 	}
 
 	public void deleteComment(WorkflowComment comment) throws DotDataException {
@@ -358,11 +382,26 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 	}
 
 	public void deleteStep(WorkflowStep step) throws DotDataException {
+		String schemeId = step.getSchemeId();
 		final DotConnect db = new DotConnect();
+		
+		// delete tasks referencing it
+		db.setSQL("select id from workflow_task where status=?");
+		db.addParam(step.getId());
+		for(Map<String,Object> res : db.loadObjectResults()) {
+		    String taskId=(String)res.get("id");
+		    WorkflowTask task=findWorkFlowTaskById(taskId);
+		    deleteWorkflowTask(task);
+		}
+		
 		db.setSQL(sql.DELETE_STEP);
 		db.addParam(step.getId());
 		db.loadResult();
 		cache.remove(step);
+		
+		// update scheme mod date
+		WorkflowScheme scheme = findScheme(schemeId);
+		saveScheme(scheme);
 	}
 
 	public void deleteWorkflowActionClassParameters(WorkflowActionClass actionClass) throws DotDataException {
@@ -370,6 +409,12 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		db.setSQL(sql.DELETE_ACTION_CLASS_PARAM_BY_ACTION_CLASS);
 		db.addParam(actionClass.getId());
 		db.loadResult();
+		
+		// update scheme mod date
+		WorkflowAction action = findAction(actionClass.getActionId());
+		WorkflowStep step = findStep(action.getStepId());
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
 
 	}
 
@@ -382,6 +427,8 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 
 	public void deleteWorkflowTask(WorkflowTask task) throws DotDataException {
 		final DotConnect db = new DotConnect();
+		
+		HibernateUtil.evict(task);
 
 		Contentlet c = new Contentlet();
 		c.setIdentifier(task.getWebasset());
@@ -409,6 +456,10 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 			db.setSQL("delete from workflow_task where id = ?");
 			db.addParam(task.getId());
 			db.loadResult();
+			
+			if(localTransaction){
+                HibernateUtil.commitTransaction();
+            }
 
 		} catch (final Exception e) {
 			if(localTransaction){
@@ -417,10 +468,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 			Logger.error(this, "deleteWorkflowTask failed:" + e, e);
 			throw new DotDataException(e.toString());
 		}
-		finally{
-			if(localTransaction){
-				HibernateUtil.commitTransaction();
-			}
+		finally {
 			cache.remove(c);
 		}
 	}
@@ -498,7 +546,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		db.setSQL(sql.SELECT_ACTION_CLASS_PARAMS_BY_ACTIONCLASS);
 		db.addParam(actionClass.getId());
 		final List<WorkflowActionClassParameter> list = (List<WorkflowActionClassParameter>) this.convertListToObjects(db.loadObjectResults(), WorkflowActionClassParameter.class);
-		final Map<String, WorkflowActionClassParameter> map = new LinkedHashMap();
+		final Map<String, WorkflowActionClassParameter> map = new LinkedHashMap<String, WorkflowActionClassParameter>();
 		for (final WorkflowActionClassParameter param : list) {
 			map.put(param.getKey(), param);
 		}
@@ -721,7 +769,10 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		query.append(" where  ");
 		if (UtilMethods.isSet(searcher.getKeywords())) {
 			query.append(" (lower(workflow_task.title) like ? or ");
-			query.append(" lower(workflow_task.description) like ? )  and ");
+			if(DbConnectionFactory.isMsSql())
+				query.append(" lower(cast(workflow_task.description as varchar(max))) like ? )  and ");
+			else
+				query.append(" lower(workflow_task.description) like ? )  and ");
 		}
 
 		if(!searcher.getShow4All() || !(APILocator.getRoleAPI().doesUserHaveRole(searcher.getUser(), APILocator.getRoleAPI().loadCMSAdminRole())
@@ -781,14 +832,16 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		query.append(" 1=1  ");
 		if (!counting) {
 			query.append(" order by ");
+			String orderby="";
 			if (!UtilMethods.isSet(searcher.getStepId())) {
 				// condition.append(" status , ");
 			}
 			if (UtilMethods.isSet(searcher.getOrderBy())) {
-				query.append(searcher.getOrderBy());
+				orderby=searcher.getOrderBy();
 			} else {
-				query.append("mod_date desc");
+				orderby="mod_date desc";
 			}
+			query.append(orderby.replace("mod_date", "workflow_task.mod_date"));
 		}
 
 		dc.setSQL(query.toString());
@@ -877,6 +930,13 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		WorkflowStep proxy = new WorkflowStep();
 		proxy.setId(action.getStepId());
 		cache.removeActions(proxy);
+		
+
+		// update workflowScheme mod date
+		WorkflowStep step = findStep(action.getStepId());
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
+
 	}
 
 	public void saveActionClass(WorkflowActionClass actionClass) throws DotDataException {
@@ -915,11 +975,34 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 			db.loadResult();
 		}
 		// cache.remove(step);
+		
+
+		// update workflowScheme mod date
+		WorkflowAction action = findAction(actionClass.getActionId());
+		WorkflowStep step = findStep(action.getStepId());
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
 	}
 
 	public void saveComment(WorkflowComment comment) throws DotDataException {
-
-		HibernateUtil.saveOrUpdate(comment);
+	    if(InodeUtils.isSet(comment.getId())) {
+	        boolean update=false;
+    	    try {
+    	        HibernateUtil.load(WorkflowComment.class, comment.getId());
+    	        // if no exception it exists. just update
+    	        update=true;
+    	    }
+    	    catch(Exception ex) {
+    	        // if it doesn't then save with primary key
+    	        HibernateUtil.saveWithPrimaryKey(comment, comment.getId());
+    	    }
+    	    if(update) {
+    	        HibernateUtil.update(comment);
+    	    }
+	    }
+	    else {
+	        HibernateUtil.save(comment);
+	    }
 
 	}
 
@@ -938,6 +1021,8 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 		} else {
 			scheme.setId(UUIDGenerator.generateUuid());
 		}
+		
+		scheme.setModDate(new Date());
 
 		final DotConnect db = new DotConnect();
 		try {
@@ -950,6 +1035,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 				db.addParam(scheme.isMandatory());
 				db.addParam(scheme.getEntryActionId());
 				db.addParam(scheme.isDefaultScheme());
+				db.addParam(scheme.getModDate());
 				db.loadResult();
 			} else {
 				db.setSQL(sql.UPDATE_SCHEME);
@@ -958,6 +1044,7 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 				db.addParam(scheme.isArchived());
 				db.addParam(scheme.isMandatory());
 				db.addParam(scheme.getEntryActionId());
+				db.addParam(scheme.getModDate());
 				db.addParam(scheme.getId());
 				db.loadResult();
 
@@ -1075,6 +1162,10 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 			db.loadResult();
 		}
 		cache.remove(step);
+		
+		// update workflowScheme mod date
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
 
 	}
 
@@ -1112,20 +1203,67 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
 
 			db.loadResult();
 		}
+		
+
+		// update workflowScheme mod date
+		WorkflowActionClass actionClass = findActionClass(param.getActionClassId());
+		WorkflowAction action = findAction(actionClass.getActionId());
+		WorkflowStep step = findStep(action.getStepId());
+		WorkflowScheme scheme = findScheme(step.getSchemeId());
+		saveScheme(scheme);
 	}
 
 	public void saveWorkflowHistory(WorkflowHistory history) throws DotDataException {
-		HibernateUtil.saveOrUpdate(history);
+	    if(InodeUtils.isSet(history.getId())) {
+	        boolean update=false;
+	        try {
+	            HibernateUtil.load(WorkflowHistory.class, history.getId());
+	            // if exists just update
+	            update=true;
+	        }
+	        catch(Exception ex) {
+	            // if not then save with existing key
+	            HibernateUtil.saveWithPrimaryKey(history, history.getId());	            
+	        }
+	        if(update) {
+	            HibernateUtil.update(history);
+	        }
+	    }
+	    else {
+	        HibernateUtil.save(history);
+	    }
 	}
 
-	public void saveWorkflowTask(WorkflowTask task) throws DotDataException {
-		if (task.isNew()) {
-			HibernateUtil.save(task);
-		} else {
-			HibernateUtil.saveOrUpdate(task);
-		}
-		cache.remove(task);
-	}
+    /**
+     * Saves a given WorkflowTask, if the task does not exist it will create a new one and if does exist
+     * it will update the existing record.
+     * <br/>
+     * If the record does not exist and the given task have set an id the new record will be created with that id.
+     *
+     * @param task
+     * @throws DotDataException
+     */
+    public void saveWorkflowTask ( WorkflowTask task ) throws DotDataException {
+
+        if ( task.isNew() ) {
+            HibernateUtil.save( task );
+        } else {
+
+            try {
+                Object currentWorkflowTask = HibernateUtil.load( WorkflowTask.class, task.getId() );
+                HibernateUtil.evict( currentWorkflowTask );//Remove the object from hibernate cache, we used just to verify if exist
+
+                // if the object exists no exception is thrown so just update it
+
+                HibernateUtil.update( task );
+            } catch ( Exception ex ) {
+                // if it doesn't exists then save with that primary key
+                HibernateUtil.saveWithPrimaryKey( task, task.getId() );
+            }
+        }
+
+        cache.remove( task );
+    }
 
 	public List<WorkflowTask> searchTasks(WorkflowSearcher searcher) throws DotDataException {
 		DotConnect dc = getWorkflowSqlQuery(searcher, false);
@@ -1222,5 +1360,20 @@ public class WorkflowFactoryImpl implements WorkFlowFactory {
             throw new DotDataException(e.getMessage(),e);
         }
         return scheme;
+    }
+
+    @Override
+    public void deleteWorkflowActionClassParameter(WorkflowActionClassParameter param) throws DotDataException {
+        DotConnect db=new DotConnect();
+        db.setSQL(sql.DELETE_ACTION_CLASS_PARAM_BY_ID);
+        db.addParam(param.getId());
+        db.loadResult();
+        
+        // update scheme mod date
+        WorkflowActionClass clazz = findActionClass(param.getActionClassId());
+        WorkflowAction action = findAction(clazz.getActionId());
+        WorkflowStep step = findStep(action.getStepId());
+        WorkflowScheme scheme = findScheme(step.getSchemeId());
+        saveScheme(scheme);
     }
 }

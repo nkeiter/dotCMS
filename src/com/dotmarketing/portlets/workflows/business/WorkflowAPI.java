@@ -145,6 +145,7 @@ public interface WorkflowAPI {
 	 * @throws DotDataException
 	 */
 	public void  saveWorkflowTask(WorkflowTask task, WorkflowProcessor processor) throws DotDataException;
+	public void  saveWorkflowTask(WorkflowTask task) throws DotDataException;
 
 	public List<WorkflowScheme> findSchemes(boolean showArchived) throws DotDataException;
 
@@ -263,5 +264,7 @@ public interface WorkflowAPI {
      * @return the schema with the specified name. null if it doesn't exists
      */
     public WorkflowScheme findSchemeByName(String schemaName) throws DotDataException;
+
+    public void deleteWorkflowActionClassParameter(WorkflowActionClassParameter param) throws DotDataException;
 
 }

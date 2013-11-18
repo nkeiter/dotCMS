@@ -13,7 +13,6 @@ import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.CacheLocator;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.util.Logger;
-import com.dotmarketing.util.UtilMethods;
 
 public class DependencySet extends HashSet<String> {
 
@@ -27,13 +26,15 @@ public class DependencySet extends HashSet<String> {
 	private String bundleId;
 	private Bundle bundle;
 	private boolean isDownload;
+	private boolean isPublish;
 
-	public DependencySet(String bundleId, String assetType, boolean isDownload) {
+	public DependencySet(String bundleId, String assetType, boolean isDownload, boolean isPublish) {
 		super();
 		cache = CacheLocator.getPushedAssetsCache();
 		this.assetType = assetType;
 		this.bundleId = bundleId;
 		this.isDownload = isDownload;
+		this.isPublish = isPublish;
 
 		try {
 			envs = APILocator.getEnvironmentAPI().findEnvironmentsByBundleId(bundleId);
@@ -48,7 +49,37 @@ public class DependencySet extends HashSet<String> {
 		}
 	}
 
-	public boolean add(String assetId, Date assetModDate) {
+    public boolean add ( String assetId, Date assetModDate ) {
+        return addOrClean( assetId, assetModDate, false );
+    }
+
+    /**
+     * Is this method is called and in case of an <strong>UN-PUBLISH</strong> instead of adding elements it will remove them
+     * from cache.<br>
+     * For <strong>PUBLISH</strong> do the same as the <strong>add</strong> method.
+     *
+     * @param assetId
+     * @param assetModDate
+     * @return
+     */
+    public boolean addOrClean ( String assetId, Date assetModDate) {
+        return addOrClean( assetId, assetModDate, true );
+    }
+
+    private boolean addOrClean ( String assetId, Date assetModDate, Boolean cleanForUnpublish ) {
+
+        if ( !isPublish ) {
+
+            //For un-publish we always remove the asset from cache
+            for ( Environment env : envs ) {
+                cache.removePushedAssetById( assetId, env.getId() );
+            }
+
+            //Return if we are here just to clean up dependencies from cache
+            if ( cleanForUnpublish ) {
+                return true;
+            }
+        }
 
 		boolean modified = false;
 
@@ -58,12 +89,16 @@ public class DependencySet extends HashSet<String> {
 		// if the asset hasn't been sent to at least one environment or an older version was sen't,
 		// we need to add it to the cache
 
-		if(!bundle.isForcePush() && !isDownload ) {
+        Boolean isForcePush = false;
+        if ( bundle != null ) {
+            isForcePush = bundle.isForcePush();
+        }
 
-			for (Environment env : envs) {
+        if ( !isForcePush && !isDownload && isPublish ) {
+            for (Environment env : envs) {
 				PushedAsset asset = cache.getPushedAsset(assetId, env.getId());
 
-				if(modified |= (asset==null || !UtilMethods.isSet(assetModDate) || asset.getPushDate().before(assetModDate) )) {
+				if(modified |= (asset==null || (assetModDate!=null && asset.getPushDate().before(assetModDate)))) {
 					try {
 						asset = new PushedAsset(bundleId, assetId, assetType, new Date(), env.getId());
 						APILocator.getPushedAssetsAPI().savePushedAsset(asset);
@@ -78,10 +113,10 @@ public class DependencySet extends HashSet<String> {
 
 		}
 
-		if(bundle.isForcePush() || isDownload || modified) {
-			super.add(assetId);
-			return true;
-		}
+        if ( isForcePush || isDownload || !isPublish || modified ) {
+            super.add( assetId );
+            return true;
+        }
 
 		return false;
 	}

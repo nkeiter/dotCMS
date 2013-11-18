@@ -4,7 +4,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.dotmarketing.beans.ContainerStructure;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.DotStateException;
 import com.dotmarketing.exception.DotDataException;
@@ -70,59 +69,6 @@ public interface ContainerAPI {
 	public List<Container> getContainersInTemplate(Template parentTemplate) throws DotHibernateException, DotStateException, DotDataException, DotSecurityException;
 
 	/**
-	 *
-	 * Retrieves a list of container-structure relationships by container
-	 *
-	 * @param container
-	 * @return
-	 * @throws DotSecurityException
-	 * @throws DotDataException
-	 * @throws DotStateException
-	 *
-	 */
-
-	public List<ContainerStructure> getContainerStructures(Container container) throws DotStateException, DotDataException, DotSecurityException;
-
-	/**
-	 *
-	 * Retrieves the list of structures related to the given container
-	 *
-	 * @param container
-	 * @return
-	 * @throws DotSecurityException
-	 * @throws DotDataException
-	 * @throws DotStateException
-	 *
-	 */
-	public List<Structure> getStructuresInContainer(Container container) throws DotStateException, DotDataException, DotSecurityException;
-
-	/**
-	 *
-	 * saves a list of container-structure relationships
-	 *
-	 * @param containerStructureList
-	 * @return
-	 * @throws DotSecurityException
-	 * @throws DotDataException
-	 * @throws DotStateException
-	 *
-	 */
-	public void saveContainerStructures(List<ContainerStructure> containerStructureList) throws DotStateException, DotDataException, DotSecurityException;
-
-	/**
-	 *
-	 * deletes the container-structure relationships for the given container
-	 *
-	 * @param container
-	 * @return
-	 * @throws DotSecurityException
-	 * @throws DotDataException
-	 * @throws DotStateException
-	 *
-	 */
-	public void deleteContainerStructuresByContainer(Container container) throws DotStateException, DotDataException, DotSecurityException;
-
-	/**
 	 * Retrieves all the containers attached to the given host
 	 * @param parentPermissionable
 	 * @author David H Torres
@@ -153,7 +99,7 @@ public interface ContainerAPI {
 	 * @throws DotDataException
 	 * @throws DotSecurityException
 	 */
-	public Container save(Container container, List<ContainerStructure> containerStructureList, Host host, User user, boolean respectFrontendRoles) throws DotDataException, DotSecurityException;
+	public Container save(Container container, Structure structure, Host host, User user, boolean respectFrontendRoles) throws DotDataException, DotSecurityException;
 
 
 	/**
@@ -203,6 +149,5 @@ public interface ContainerAPI {
             throws DotDataException;
 
     public int deleteOldVersions(Date assetsOlderThan) throws DotStateException, DotDataException;
-
 
 }

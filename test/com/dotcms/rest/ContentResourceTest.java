@@ -29,6 +29,7 @@ import com.dotmarketing.portlets.categories.model.Category;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.fileassets.business.FileAsset;
 import com.dotmarketing.portlets.fileassets.business.FileAssetAPI;
+
 import com.dotmarketing.portlets.folders.model.Folder;
 import com.dotmarketing.portlets.structure.factories.FieldFactory;
 import com.dotmarketing.portlets.structure.factories.RelationshipFactory;
@@ -472,6 +473,7 @@ public class ContentResourceTest extends TestBase {
     
     @Test
     public void uriFileImageFields() throws Exception {
+
         User sysuser=APILocator.getUserAPI().getSystemUser();
         
         final String salt=Long.toString(System.currentTimeMillis());
@@ -531,6 +533,7 @@ public class ContentResourceTest extends TestBase {
         Contentlet cont = APILocator.getContentletAPI().find(inode, sysuser, false);
         Assert.assertEquals(filea.getIdentifier(),cont.getStringProperty(file.getVelocityVarName()));
         Assert.assertEquals(imga.getIdentifier(),cont.getStringProperty(image.getVelocityVarName()));
+
     }
     
     @Test
@@ -597,6 +600,56 @@ public class ContentResourceTest extends TestBase {
         Assert.assertEquals(0, inodes.size());
             
     }
+    
+    @Test
+    public void newVersion() throws Exception {
+        final User sysuser=APILocator.getUserAPI().getSystemUser();
+        
+        ClientResponse response=contRes.path("/justSave/1")
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .header(authheader, authvalue).put(ClientResponse.class,
+                    new JSONObject()
+                        .put("stName", "webPageContent")
+                        .put("contentHost", "demo.dotcms.com")
+                        .put("title", "testing newVersion")
+                        .put("body", "just testing")
+                        .toString());
+        Assert.assertEquals(200, response.getStatus());
+        
+        String inode=response.getHeaders().getFirst("inode");
+        
+        
+        String identifier=response.getHeaders().getFirst("identifier");
+        
+        response=contRes.path("/justSave/1")
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .header(authheader, authvalue).put(ClientResponse.class,
+                    new JSONObject()
+                        .put("stName", "webPageContent")
+                        .put("contentHost", "demo.dotcms.com")
+                        .put("title", "testing newVersion 2")
+                        .put("body", "just testing 2")
+                        .put("identifier", identifier)
+                        .toString());
+        String inode2=response.getHeaders().getFirst("inode");
+        String identifier2=response.getHeaders().getFirst("identifier");
+        
+        Assert.assertEquals(identifier, identifier2);
+        Assert.assertNotSame(inode, inode2);
+        
+        Contentlet c1=APILocator.getContentletAPI().find(inode, sysuser, false);
+        Contentlet c2=APILocator.getContentletAPI().find(inode2, sysuser, false);
+        
+        Contentlet working=APILocator.getContentletAPI().findContentletByIdentifier(identifier, false, 1, sysuser, false);
+        
+        Assert.assertEquals("testing newVersion 2", c2.getStringProperty("title"));
+        Assert.assertEquals("just testing 2", c2.getStringProperty("body"));
+        Assert.assertEquals(c1.getIdentifier(), c2.getIdentifier());
+        
+        Assert.assertEquals(working.getInode(), c2.getInode());
+
+    }
+    
 }
 
 

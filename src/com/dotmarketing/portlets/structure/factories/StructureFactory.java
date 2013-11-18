@@ -300,7 +300,7 @@ public class StructureFactory {
 		}
 		return retList;
 	}
-
+	
 	public static List<Structure> getStructuresUnderHost(Host h, User user, boolean respectFrontendRoles) throws DotDataException
 	{
 
@@ -391,6 +391,15 @@ public class StructureFactory {
 		return list;
 	}
 
+	
+	protected static void fixFolderHost(Structure st) {
+	    if(!UtilMethods.isSet(st.getFolder())) {
+	        st.setFolder("SYSTEM_FOLDER");
+	    }
+	    if(!UtilMethods.isSet(st.getHost())) {
+	        st.setHost("SYSTEM_HOST");
+	    }
+	}
 
 	//### CREATE AND UPDATE
 	public static void saveStructure(Structure structure) throws DotHibernateException
@@ -398,20 +407,20 @@ public class StructureFactory {
 		structure.setUrlMapPattern(cleanURLMap(structure.getUrlMapPattern()));
 		Date now = new Date();
 		structure.setiDate(now);
-		structure.setModDate(now);
+		fixFolderHost(structure);
 		HibernateUtil.saveOrUpdate(structure);
-
+		
 		if(UtilMethods.isSet(structure.getUrlMapPattern())) {
 		    StructureCache.clearURLMasterPattern();
 		}
 	}
-
+	
 	public static void saveStructure(Structure structure, String existingId) throws DotHibernateException
 	{
 		structure.setUrlMapPattern(cleanURLMap(structure.getUrlMapPattern()));
 		Date now = new Date();
 		structure.setiDate(now);
-		structure.setModDate(now);
+		fixFolderHost(structure);
 		HibernateUtil.saveWithPrimaryKey(structure, existingId);
 	}
 

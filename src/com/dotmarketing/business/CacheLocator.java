@@ -241,6 +241,7 @@ public class CacheLocator extends Locator<CacheIndex>{
 		return (PushedAssetsCache)getInstance(CacheIndex.PushedAssets);
 	}
 
+
 	/**
 	 * The legacy cache administrator will invalidate cache entries within a cluster
 	 * on a put where the non legacy one will not.

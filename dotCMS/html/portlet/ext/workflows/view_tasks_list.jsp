@@ -14,8 +14,7 @@
 <%@page import="com.dotmarketing.portlets.workflows.model.WorkflowTask"%>
 <%@page import="com.dotmarketing.portlets.workflows.model.WorkflowSearcher"%>
 <%
-
-	WorkflowSearcher searcher = new WorkflowSearcher(UtilMethods.getParameterMap(request), user);
+	WorkflowSearcher searcher = new WorkflowSearcher(request.getParameterMap(), user);
 	session.setAttribute(com.dotmarketing.util.WebKeys.WORKFLOW_SEARCHER, searcher);	
 	WorkflowSearcher fakeSearcher =(WorkflowSearcher) BeanUtils.cloneBean(searcher) ;
 	WorkflowAPI wapi = APILocator.getWorkflowAPI();
@@ -155,10 +154,10 @@
 
 				
 			</td>
-			<td onClick="editTask('<%=task.getId()%>')">
-				<%=task.getTitle() %>
+			<td onClick="editTask('<%=task.getId()%>', '<%=contentlet.getLanguageId()%>')">
+				<%=contentlet.getTitle() %>
 				</td>
-			<td nowrap="true" align="center" width="1%" onClick="editTask('<%=task.getId()%>')">
+			<td nowrap="true" align="center" width="1%" onClick="editTask('<%=task.getId()%>', '<%=contentlet.getLanguageId()%>')">
 				<%if (contentlet.isLive()) {%>
 		            <span class="liveIcon"></span>
 		        <%} else if (contentlet.isArchived()) {%>
@@ -177,7 +176,7 @@
 			</td>
 
 				
-			<td align="center" onClick="editTask('<%=task.getId()%>')" <%if(step.isResolved()) {%>style="text-decoration: line-through;"<%} %> >
+			<td align="center" onClick="editTask('<%=task.getId()%>', '<%=contentlet.getLanguageId()%>')" <%if(step.isResolved()) {%>style="text-decoration: line-through;"<%} %> >
 
 				 <%=step.getName() %>
 

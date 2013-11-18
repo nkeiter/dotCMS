@@ -3,7 +3,6 @@
 <%@ page import="com.dotmarketing.util.UtilMethods" %>
 <%@ page import="com.liferay.portal.language.LanguageUtil"%>
 <%@page import="java.util.*"%>
-<%@page import="com.dotcms.enterprise.LicenseUtil"%>
 <%
 
 String catCount = (String) request.getAttribute("counter");
@@ -606,70 +605,6 @@ dojo.require("dojox.layout.ContentPane");
 		}).placeAt("contentletVersionsDiv");
     }
 
-	function saveBinaryFileOnContent(fieldInode, fieldVarName, fieldContentlet, fileName){
-		var fieldRelatedData = {"fieldContentlet" : fieldContentlet,
-								"fieldVarName" : fieldVarName,
-								"fieldInode" : fieldInode,
-								"fileName" : fileName};
-		var callMetaData = { callback:saveBinaryFileOnContentCallback, arg: fieldRelatedData };
-		ContentletAjax.saveBinaryFileOnContent(fileName,fieldInode,callMetaData);
-	}
-
-	function saveBinaryFileOnContentCallback(data, fieldRelatedData){
-
-		if(data["contentletInode"] != null && isInodeSet(data["contentletInode"])){
-			document.getElementsByName(fieldRelatedData['fieldContentlet'])[0].value = data["contentletInode"];
-
-			var thumbnailParentDiv = document.createElement("div");
-			thumbnailParentDiv.setAttribute("id",'thumbnailParent'+fieldRelatedData['fieldVarName']);
-			var fieldDiv = dojo.byId(fieldRelatedData['fieldVarName']+'_field');
-			if(fieldDiv.childNodes.length > 0){
-				fieldDiv.insertBefore(thumbnailParentDiv,fieldDiv.childNodes[0])
-			}else{
-				fieldDiv.appendChild(thumbnailParentDiv);
-			}
-
-			<% if(LicenseUtil.getLevel() < 199){ %>
-
-				var newFileDialogTitle = "<%=LanguageUtil.get(pageContext,"Image") %>";
-
-				var newFileDialogContent = '<div style="text-align:center;margin:auto;overflow:auto;width:700px;height:400px;">'
-								+ '<img src="/contentAsset/image/'+data["contentletInode"]+'/fileAsset/?byInode=1"/>'
-								+ '</div>'
-								+ '<div class="callOutBox">'
-				                                + '<%=LanguageUtil.get(pageContext,"dotCMS-Enterprise-comes-with-an-advanced-Image-Editor-tool") %>'
-								+ '</div>';
-
-				var newFileDialog = new dijit.Dialog({
-					id: data['contentletInode']+'_Dialog',
-				    title: newFileDialogTitle,
-				    content: newFileDialogContent,
-				    style: "overflow:auto;width:760px;height:540px;"
-				});
-
-				var thumbNailImg = document.createElement("img");
-				thumbNailImg.setAttribute("src","/contentAsset/image/"+data['contentletInode']+"/fileAsset/?byInode=1&filter=Thumbnail&thumbnail_w=300&thumbnail_h=300");
-				thumbNailImg.setAttribute("onmouseover","dojo.attr(this, 'className', 'thumbnailDivHover');");
-				thumbNailImg.setAttribute("onmouseout","dojo.attr(this, 'className', 'thumbnailDiv');");
-				thumbNailImg.setAttribute("onclick","dijit.byId('"+data['contentletInode']+'_Dialog'+"').show()");
-				thumbnailParentDiv.appendChild(thumbNailImg);
-
-			<%} else { %>
-
-				var newImageEditor = new dotcms.dijit.image.ImageEditor({
-				            editImageText : "<%= LanguageUtil.get(pageContext, "Edit-Image") %>",
-				            inode : data["contentletInode"],
-				            fieldName : "fileAsset",
-				            binaryFieldId : "binary1",
-				            fieldContentletId : "binary1",
-				            saveAsFileName : fieldRelatedData['fileName'],
-				            class : "thumbnailDiv"+fieldRelatedData['fieldVarName'],
-							parentNode: thumbnailParentDiv})
-
-			<%}%>
-		}
-	}
-
     //*************************************
     //
     //
@@ -738,7 +673,6 @@ dojo.require("dojox.layout.ContentPane");
 						+ "&expireDate=<%=structure.getExpireDateVar()%>"
 						+ "&structureInode=<%=structure.getInode()%>"
 						+ "&r=" + r;
-						console.log(url);
     			myCp.attr("href", url);
     			return;
     		}
@@ -802,6 +736,9 @@ dojo.require("dojox.layout.ContentPane");
 					: (dojo.byId("whereToSend"))
 						? dojo.byId("whereToSend").value
 								: "";
+
+            var forcePush = (dijit.byId("forcePush")) ? dijit.byId("forcePush").checked : false;
+
 			// END: PUSH PUBLISHING ACTIONLET
 
 			dojo.byId("wfActionAssign").value=assignRole;

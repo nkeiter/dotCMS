@@ -147,19 +147,20 @@ dojo.declare("dotcms.dojo.push.PushHandler", null, {
 
     	var addToBundle = atb!=null?"_atb":"";
 
-        var filterDiv = dojo.byId("filterTimeDiv"+addToBundle);
-        if (filterDiv && filterDiv.style.display == "") {
-            var filterDate = (dijit.byId("wfFilterDateAux"+addToBundle) && dijit.byId("wfFilterDateAux"+addToBundle) != 'undefined')
-                ? dojo.date.locale.format(dijit.byId("wfFilterDateAux"+addToBundle).getValue(), {datePattern: "yyyy-MM-dd", selector: "date"})
-                    : (dojo.byId("wfFilterDateAux"+addToBundle) && dojo.byId("wfFilterDateAux"+addToBundle) != 'undefined')
-                        ? dojo.date.locale.format(dojo.byId("wfFilterDateAux"+addToBundle).value, {datePattern: "yyyy-MM-dd", selector: "date"})
-                            : "";
+    	var filterDiv = dojo.byId("filterTimeDiv"+addToBundle);
 
-            var filterTime = (dijit.byId("wfFilterTimeAux"+addToBundle))
-                ? dojo.date.locale.format(dijit.byId("wfFilterTimeAux"+addToBundle).getValue(), {timePattern: "H-m", selector: "time"})
-                    : (dojo.byId("wfFilterTimeAux"+addToBundle))
-                        ? dojo.date.locale.format(dojo.byId("wfFilterTimeAux"+addToBundle).value, {timePattern: "H-m", selector: "time"})
-                            : "";
+    	if (filterDiv && filterDiv.style.display == "") {
+    		var filterDate = (dijit.byId("wfFilterDateAux"+addToBundle) && dijit.byId("wfFilterDateAux"+addToBundle) != 'undefined')
+    		? dojo.date.locale.format(dijit.byId("wfFilterDateAux"+addToBundle).getValue(), {datePattern: "yyyy-MM-dd", selector: "date"})
+    				: (dojo.byId("wfFilterDateAux"+addToBundle) && dojo.byId("wfFilterDateAux"+addToBundle) != 'undefined')
+    				? dojo.date.locale.format(dojo.byId("wfFilterDateAux"+addToBundle).value, {datePattern: "yyyy-MM-dd", selector: "date"})
+    						: "";
+
+			var filterTime = (dijit.byId("wfFilterTimeAux"+addToBundle))
+			? dojo.date.locale.format(dijit.byId("wfFilterTimeAux"+addToBundle).getValue(), {timePattern: "H-m", selector: "time"})
+					: (dojo.byId("wfFilterTimeAux"+addToBundle))
+					? dojo.date.locale.format(dojo.byId("wfFilterTimeAux"+addToBundle).value, {timePattern: "H-m", selector: "time"})
+							: "";
 
             return filterDate + "-" + filterTime;
         } else {
@@ -229,20 +230,32 @@ dojo.declare("dotcms.dojo.push.PushHandler", null, {
         dojo.byId("forcePush").value = forcePush;
 		// END: PUSH PUBLISHING ACTIONLET
 
-        var urlStr = this.isBundle?"/DotAjaxDirector/com.dotcms.publisher.ajax.RemotePublishAjaxAction/cmd/pushBundle":"/DotAjaxDirector/com.dotcms.publisher.ajax.RemotePublishAjaxAction/cmd/publish";
+        //Hide the buttons and display the progress
+        dojo.query("#publishForm .buttonRow").style("display", "none");
+        dojo.query("#publishForm .progressRow").style("display", "block");
 
+        var currentObject = this;
+        var urlStr = this.isBundle?"/DotAjaxDirector/com.dotcms.publisher.ajax.RemotePublishAjaxAction/cmd/pushBundle":"/DotAjaxDirector/com.dotcms.publisher.ajax.RemotePublishAjaxAction/cmd/publish";
 		var xhrArgs = {
 			url: urlStr,
 			form: dojo.byId("remotePublishForm"),
-			handleAs: "text",
+			handleAs: "json",
 			load: function(data){
-				if(data.indexOf("FAILURE") > -1){
-					alert(data);
-				}
+
+                //Display the results to the user if required
+                if (data != undefined && data != null) {
+                    currentObject._showResultMessage(data);
+                }
+
 				dialog.hide();
 			},
 			error: function(error){
-				alert(error);
+                showDotCMSSystemMessage(error, true);
+
+                //Show the buttons and hide the progress
+                dojo.query("#publishForm .buttonRow").style("display", "block");
+                dojo.query("#publishForm .progressRow").style("display", "none");
+
 				dialog.hide();
 			}
 		};
@@ -289,22 +302,55 @@ dojo.declare("dotcms.dojo.push.PushHandler", null, {
         dojo.byId("bundleSelect").value = bundleId;
         // END: PUSH PUBLISHING ACTIONLET
 
+        //Disable the save button
+        dojo.query("#publishForm .buttonRow").style("display", "none");
+        dojo.query("#publishForm .progressRow").style("display", "block");
+
+        var currentObject = this;
         var xhrArgs = {
             url: "/DotAjaxDirector/com.dotcms.publisher.ajax.RemotePublishAjaxAction/cmd/addToBundle",
             form: dojo.byId("remotePublishForm"),
-            handleAs: "text",
+            handleAs: "json",
             load: function (data) {
-                if (data.indexOf("FAILURE") > -1) {
-                    alert(data);
+
+                //Display the results to the user if required
+                if (data != undefined && data != null) {
+                    currentObject._showResultMessage(data);
                 }
+
                 dialog.hide();
             },
             error: function (error) {
-                alert(error);
+                showDotCMSSystemMessage(error, true);
+
+                //Show the buttons and hide the progress
+                dojo.query("#publishForm .buttonRow").style("display", "block");
+                dojo.query("#publishForm .progressRow").style("display", "none");
+
                 dialog.hide();
             }
         };
         dojo.xhrPost(xhrArgs);
+    },
+
+    _showResultMessage : function (data) {
+
+        //Show the buttons and hide the progress
+        dojo.query("#publishForm .buttonRow").style("display", "block");
+        dojo.query("#publishForm .progressRow").style("display", "none");
+
+        //var total = data.total;
+        var errors = data.errors;
+        if (errors != null && errors != undefined && errors > 0) {
+
+            var errorMessages = data.errorMessages;
+
+            var messages = "";
+            dojo.forEach(errorMessages, function(value, index){
+                messages += "<br>" + value;
+            });
+            showDotCMSSystemMessage(messages, true);
+        }
     },
 
 	addSelectedToWhereToSend : function (){
@@ -377,6 +423,7 @@ dojo.declare("dotcms.dojo.push.PushHandler", null, {
 				x++;
 			}
 		}
+
 		this.whereToSend= newCanUse;
 
 		for(i=0; i< window.lastSelectedEnvironments.length ; i++){
@@ -386,7 +433,6 @@ dojo.declare("dotcms.dojo.push.PushHandler", null, {
 		}
 
 	},
-
     clear: function () {
         this.whereToSend = new Array();
     }
